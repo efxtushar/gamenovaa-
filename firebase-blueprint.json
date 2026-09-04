@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public user profile and account stats",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "display_name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "moderator", "admin"] },
+        "level": { "type": "number" },
+        "xp": { "type": "number" },
+        "bio": { "type": "string" },
+        "customization": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "username", "role"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "User bookmarked games",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "gameId": { "type": "string" },
+        "gameSlug": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gameId"]
+    },
+    "GameScore": {
+      "title": "GameScore",
+      "description": "High scores achieved by users across games",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "gameSlug": { "type": "string" },
+        "gameTitle": { "type": "string" },
+        "score": { "type": "number" },
+        "achievedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gameSlug", "score"]
+    },
+    "GameRating": {
+      "title": "GameRating",
+      "description": "User rating and review for a game",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "gameSlug": { "type": "string" },
+        "rating": { "type": "number" },
+        "review": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gameSlug", "rating"]
+    },
+    "RecentlyPlayed": {
+      "title": "RecentlyPlayed",
+      "description": "History of games played by user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "gameSlug": { "type": "string" },
+        "lastPlayedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gameSlug"]
+    },
+    "CustomGame": {
+      "title": "CustomGame",
+      "description": "Admin managed or added games",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "slug": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "instructions": { "type": "string" },
+        "rating": { "type": "number" },
+        "plays": { "type": "number" },
+        "featured": { "type": "boolean" },
+        "isTrending": { "type": "boolean" },
+        "isNew": { "type": "boolean" },
+        "themeColor": { "type": "string" },
+        "accentColor": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "slug", "title", "category"]
+    },
+    "UsernameMapping": {
+      "title": "UsernameMapping",
+      "description": "Unique username reservations",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document"
+    },
+    "/usernames/{username}": {
+      "schema": { "$ref": "#/entities/UsernameMapping" },
+      "description": "Unique username registry"
+    },
+    "/favorites/{favoriteId}": {
+      "schema": { "$ref": "#/entities/Favorite" },
+      "description": "User favorite records"
+    },
+    "/scores/{scoreId}": {
+      "schema": { "$ref": "#/entities/GameScore" },
+      "description": "Public high scores and leaderboards"
+    },
+    "/ratings/{ratingId}": {
+      "schema": { "$ref": "#/entities/GameRating" },
+      "description": "User ratings and reviews"
+    },
+    "/recently_played/{recentId}": {
+      "schema": { "$ref": "#/entities/RecentlyPlayed" },
+      "description": "Recently played games list"
+    },
+    "/custom_games/{gameId}": {
+      "schema": { "$ref": "#/entities/CustomGame" },
+      "description": "Admin games collection"
+    }
+  }
+}

@@ -1,0 +1,301 @@
+/* GAMENOVA - Zombie Escape Premium UI */
+.zombie-escape {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  background: #090b0f;
+  color: #f5f7fa;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.zombie-escape canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+}
+
+.zombie-escape__hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.zombie-escape__stats {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.zombie-escape__stat {
+  min-width: 88px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(9, 12, 17, 0.72);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.zombie-escape__stat-label {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(235, 240, 245, 0.58);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.zombie-escape__stat-value {
+  display: block;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.zombie-escape__health {
+  min-width: 150px;
+}
+
+.zombie-escape__health-bar {
+  width: 100%;
+  height: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.zombie-escape__health-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #e24b4b;
+  transition: width 0.16s ease;
+}
+
+.zombie-escape__controls {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.zombie-escape__button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  background: rgba(9, 12, 17, 0.72);
+  color: #f5f7fa;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.zombie-escape__button:hover {
+  transform: translateY(-1px);
+  background: rgba(24, 28, 36, 0.9);
+  border-color: rgba(139, 92, 246, 0.55);
+}
+
+.zombie-escape__reload {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  min-width: 150px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(9, 12, 17, 0.76);
+  color: #f5f7fa;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.zombie-escape__reload[hidden],
+.zombie-escape__hidden {
+  display: none !important;
+}
+
+.zombie-escape__reload-bar {
+  width: 100%;
+  height: 3px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.zombie-escape__reload-progress {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: #a78bfa;
+}
+
+.zombie-escape__crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.zombie-escape__crosshair:before,
+.zombie-escape__crosshair:after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.zombie-escape__crosshair:before {
+  width: 2px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+}
+
+.zombie-escape__crosshair:after {
+  width: 22px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.zombie-escape__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 5, 8, 0.72);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  z-index: 30;
+}
+
+.zombie-escape__panel {
+  width: min(440px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(12, 15, 21, 0.94);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.zombie-escape__title {
+  margin: 0;
+  font-size: clamp(26px, 5vw, 42px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+
+.zombie-escape__subtitle {
+  margin: 9px 0 22px;
+  color: rgba(235, 240, 245, 0.58);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.zombie-escape__primary {
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 11px;
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.zombie-escape__primary:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+}
+
+.zombie-escape__secondary {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.zombie-escape__secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+@media (max-width: 700px) {
+  .zombie-escape__stats {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 6px;
+  }
+  .zombie-escape__stat {
+    min-width: 70px;
+    padding: 7px 9px;
+  }
+  .zombie-escape__stat-value {
+    font-size: 14px;
+  }
+  .zombie-escape__controls {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+  }
+  .zombie-escape__button {
+    width: 38px;
+    height: 38px;
+  }
+  .zombie-escape__reload {
+    bottom: 62px;
+  }
+}

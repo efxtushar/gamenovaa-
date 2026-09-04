@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mg-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#022c22"/>
+      <stop offset="50%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="mg-green" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <filter id="mg-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="800" height="450" fill="url(#mg-sky)"/>
+
+  <!-- Fantasy Mountains / Waterfalls in Background -->
+  <polygon points="60,280 180,140 300,280" fill="#042f2e" opacity="0.6"/>
+  <polygon points="240,280 380,100 520,280" fill="#0f4a47" opacity="0.7"/>
+  <polygon points="460,280 620,130 780,280" fill="#042f2e" opacity="0.6"/>
+
+  <!-- Waterfall Stream -->
+  <path d="M 380 100 Q 400 190 390 280 L 415 280 Q 425 190 395 100 Z" fill="#67e8f9" opacity="0.8"/>
+
+  <!-- Miniature Golf Island Green (Curved Ramps & Obstacles) -->
+  <!-- Water hazard below -->
+  <rect x="0" y="320" width="800" height="130" fill="#0e7490"/>
+  <path d="M 0 340 Q 200 320 400 340 Q 600 360 800 340 L 800 450 L 0 450 Z" fill="#0891b2" opacity="0.7"/>
+
+  <!-- Floating Island Golf Course -->
+  <!-- Dirt Base -->
+  <path d="M 80 340 Q 400 430 720 340 L 680 380 Q 400 460 120 380 Z" fill="#78350f"/>
+  <!-- Fairway Grass -->
+  <path d="M 80 340 Q 400 410 720 340 Q 640 260 400 270 Q 160 260 80 340 Z" fill="url(#mg-green)" stroke="#22c55e" stroke-width="3"/>
+
+  <!-- Windmill Obstacle on Left -->
+  <g transform="translate(220, 240)">
+    <polygon points="10,60 15,0 35,0 40,60" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <polygon points="10,0 25,-20 40,0" fill="#dc2626"/>
+    <!-- Rotor Blades -->
+    <circle cx="25" cy="0" r="5" fill="#facc15"/>
+    <line x1="25" y1="0" x2="-20" y2="-45" stroke="#e2e8f0" stroke-width="4"/>
+    <line x1="25" y1="0" x2="70" y2="45" stroke="#e2e8f0" stroke-width="4"/>
+    <line x1="25" y1="0" x2="-20" y2="45" stroke="#e2e8f0" stroke-width="4"/>
+    <line x1="25" y1="0" x2="70" y2="-45" stroke="#e2e8f0" stroke-width="4"/>
+  </g>
+
+  <!-- Golf Hole & Flag (Pin) -->
+  <g transform="translate(540, 310)">
+    <!-- Cup / Hole -->
+    <ellipse cx="0" cy="0" rx="14" ry="7" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <!-- Flagpole -->
+    <line x1="0" y1="0" x2="0" y2="-90" stroke="#f8fafc" stroke-width="3"/>
+    <!-- Glowing Yellow/Red Flag -->
+    <polygon points="0,-90 40,-75 0,-60" fill="#facc15" stroke="#eab308" stroke-width="1.5" filter="url(#mg-glow)"/>
+    <text x="12" y="-70" font-family="'Orbitron', sans-serif" font-weight="900" font-size="12" fill="#000">18</text>
+  </g>
+
+  <!-- Golf Ball & Aim Trajectory Line -->
+  <g transform="translate(360, 350)">
+    <!-- Arc Line with Dots -->
+    <path d="M 0 0 Q 80 -40 170 -35" stroke="#facc15" stroke-width="3" stroke-dasharray="6,8" fill="none" filter="url(#mg-glow)"/>
+    <!-- The White Golf Ball with Shadow -->
+    <ellipse cx="0" cy="8" rx="10" ry="4" fill="#064e3b" opacity="0.6"/>
+    <circle cx="0" cy="0" r="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <circle cx="-3" cy="-3" r="1.5" fill="#e2e8f0"/>
+    <circle cx="3" cy="-3" r="1.5" fill="#e2e8f0"/>
+    <circle cx="0" cy="3" r="1.5" fill="#e2e8f0"/>
+  </g>
+
+  <!-- Titles -->
+  <text x="30" y="45" font-family="'Orbitron', sans-serif" font-weight="800" font-size="20" fill="#2dd4bf" letter-spacing="3">MINI GOLF WORLD</text>
+  <text x="30" y="70" font-family="'Chakra Petch', sans-serif" font-weight="600" font-size="12" fill="#facc15" letter-spacing="4">3D PHYSICS PUTTING</text>
+  <rect x="690" y="30" width="80" height="24" rx="4" fill="#0f766e" fill-opacity="0.2" stroke="#2dd4bf" stroke-width="1.5"/>
+  <text x="730" y="46" font-family="'Orbitron', sans-serif" font-weight="700" font-size="11" fill="#ffffff" text-anchor="middle">CASUAL</text>
+</svg>

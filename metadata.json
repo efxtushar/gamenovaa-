@@ -1,0 +1,6 @@
+{
+  "name": "GAMENOVA - Premium Browser Gaming Portal",
+  "description": "A clean, modern, game-first browser gaming portal featuring 30 playable browser games, rich custom artwork, leaderboards, gamer profiles, and instant play.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

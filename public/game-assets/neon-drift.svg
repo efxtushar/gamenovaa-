@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="nd-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050512"/>
+      <stop offset="45%" stop-color="#0f1026"/>
+      <stop offset="55%" stop-color="#2a0845"/>
+      <stop offset="100%" stop-color="#08020f"/>
+    </linearGradient>
+    <linearGradient id="nd-skyline" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ff0077" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="nd-grid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff007f" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00f0ff" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="nd-car" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="50%" stop-color="#ff0055"/>
+      <stop offset="100%" stop-color="#7000ff"/>
+    </linearGradient>
+    <radialGradient id="nd-sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff007f"/>
+      <stop offset="70%" stop-color="#7928ca"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="nd-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Sky -->
+  <rect width="800" height="450" fill="url(#nd-bg)"/>
+
+  <!-- Cyber Sun -->
+  <circle cx="400" cy="220" r="140" fill="url(#nd-sun)"/>
+  <!-- Sun stripes -->
+  <line x1="260" y1="180" x2="540" y2="180" stroke="#050512" stroke-width="4"/>
+  <line x1="270" y1="195" x2="530" y2="195" stroke="#050512" stroke-width="6"/>
+  <line x1="285" y1="212" x2="515" y2="212" stroke="#050512" stroke-width="8"/>
+  <line x1="305" y1="230" x2="495" y2="230" stroke="#050512" stroke-width="12"/>
+  <line x1="330" y1="250" x2="470" y2="250" stroke="#050512" stroke-width="16"/>
+
+  <!-- Cyberpunk City Skyline -->
+  <polygon points="40,240 70,160 110,160 110,240" fill="#0d1127"/>
+  <polygon points="100,240 130,120 180,120 180,240" fill="#151b3b"/>
+  <polygon points="170,240 190,90 230,90 240,240" fill="#0d1127"/>
+  <polygon points="230,240 250,140 290,140 310,240" fill="#181f45"/>
+  <polygon points="490,240 510,130 560,130 580,240" fill="#181f45"/>
+  <polygon points="570,240 590,80 630,80 650,240" fill="#0d1127"/>
+  <polygon points="640,240 670,140 710,140 730,240" fill="#151b3b"/>
+  <polygon points="710,240 740,170 780,170 800,240" fill="#0d1127"/>
+
+  <!-- Glowing City Windows -->
+  <line x1="145" y1="140" x2="145" y2="230" stroke="#00f0ff" stroke-width="2" stroke-dasharray="3,6" opacity="0.8"/>
+  <line x1="205" y1="110" x2="205" y2="220" stroke="#ff007f" stroke-width="2" stroke-dasharray="4,8" opacity="0.8"/>
+  <line x1="610" y1="100" x2="610" y2="230" stroke="#00f0ff" stroke-width="2" stroke-dasharray="3,7" opacity="0.8"/>
+  <line x1="680" y1="155" x2="680" y2="225" stroke="#ff007f" stroke-width="2" stroke-dasharray="4,6" opacity="0.8"/>
+
+  <!-- Perspective 3D Grid Highway -->
+  <polygon points="0,240 800,240 800,450 0,450" fill="#0a0518"/>
+  <line x1="0" y1="240" x2="800" y2="240" stroke="#00f0ff" stroke-width="3" filter="url(#nd-glow)"/>
+  
+  <!-- Horizon convergence lines -->
+  <line x1="400" y1="240" x2="-200" y2="450" stroke="#ff007f" stroke-width="2" opacity="0.7"/>
+  <line x1="400" y1="240" x2="0" y2="450" stroke="#00f0ff" stroke-width="2" opacity="0.8"/>
+  <line x1="400" y1="240" x2="160" y2="450" stroke="#ff007f" stroke-width="2.5" opacity="0.9"/>
+  <line x1="400" y1="240" x2="320" y2="450" stroke="#00f0ff" stroke-width="3"/>
+  <line x1="400" y1="240" x2="480" y2="450" stroke="#00f0ff" stroke-width="3"/>
+  <line x1="400" y1="240" x2="640" y2="450" stroke="#ff007f" stroke-width="2.5" opacity="0.9"/>
+  <line x1="400" y1="240" x2="800" y2="450" stroke="#00f0ff" stroke-width="2" opacity="0.8"/>
+  <line x1="400" y1="240" x2="1000" y2="450" stroke="#ff007f" stroke-width="2" opacity="0.7"/>
+
+  <!-- Horizontal grid lines with perspective spacing -->
+  <line x1="0" y1="248" x2="800" y2="248" stroke="#ff007f" stroke-width="1" opacity="0.4"/>
+  <line x1="0" y1="260" x2="800" y2="260" stroke="#ff007f" stroke-width="1.2" opacity="0.5"/>
+  <line x1="0" y1="280" x2="800" y2="280" stroke="#00f0ff" stroke-width="1.5" opacity="0.6"/>
+  <line x1="0" y1="310" x2="800" y2="310" stroke="#ff007f" stroke-width="2" opacity="0.7"/>
+  <line x1="0" y1="355" x2="800" y2="355" stroke="#00f0ff" stroke-width="2.5" opacity="0.8"/>
+  <line x1="0" y1="415" x2="800" y2="415" stroke="#ff007f" stroke-width="3" opacity="0.9"/>
+
+  <!-- Drift Smoke & Light Trails -->
+  <path d="M 220 370 Q 320 350 480 375 Q 600 390 680 365" stroke="#ff007f" stroke-width="16" fill="none" opacity="0.3" filter="url(#nd-glow)"/>
+  <path d="M 260 380 Q 350 365 470 380 Q 560 390 640 375" stroke="#00f0ff" stroke-width="10" fill="none" opacity="0.5" filter="url(#nd-glow)"/>
+
+  <!-- Drifting Supercar -->
+  <g transform="translate(330, 270) rotate(-6)">
+    <!-- Car shadow -->
+    <ellipse cx="90" cy="95" rx="110" ry="24" fill="#000000" opacity="0.8"/>
+    <!-- Underglow -->
+    <ellipse cx="90" cy="90" rx="95" ry="15" fill="#00f0ff" opacity="0.7" filter="url(#nd-glow)"/>
+    
+    <!-- Wheels -->
+    <rect x="0" y="70" width="28" height="26" rx="6" fill="#111" stroke="#00f0ff" stroke-width="2"/>
+    <rect x="145" y="70" width="28" height="26" rx="6" fill="#111" stroke="#ff007f" stroke-width="2"/>
+    <rect x="25" y="55" width="20" height="20" rx="4" fill="#111"/>
+    <rect x="135" y="55" width="20" height="20" rx="4" fill="#111"/>
+
+    <!-- Car Body -->
+    <path d="M -10 65 L 20 45 L 60 40 L 90 20 L 140 22 L 175 48 L 195 65 L 180 80 L 0 78 Z" fill="url(#nd-car)"/>
+    <!-- Cockpit / Windshield -->
+    <path d="M 65 40 L 90 24 L 135 26 L 155 45 Z" fill="#0d1117" stroke="#00f0ff" stroke-width="1.5"/>
+    
+    <!-- Neon Accent Streaks -->
+    <path d="M -5 65 L 55 58 L 110 58 L 185 64" stroke="#ffffff" stroke-width="2"/>
+    <!-- Taillight Neon Trail -->
+    <rect x="-12" y="58" width="8" height="12" fill="#ff0055" filter="url(#nd-glow)"/>
+    <line x1="-12" y1="64" x2="-90" y2="55" stroke="#ff0055" stroke-width="4" filter="url(#nd-glow)"/>
+    <line x1="-12" y1="68" x2="-140" y2="70" stroke="#ff00aa" stroke-width="2" filter="url(#nd-glow)"/>
+    <!-- Headlights -->
+    <polygon points="190,62 198,66 190,70" fill="#00f0ff" filter="url(#nd-glow)"/>
+    <!-- Headlight Beams -->
+    <polygon points="195,64 350,30 380,120 195,68" fill="#00f0ff" opacity="0.2" filter="url(#nd-glow)"/>
+    <!-- Rear Spoiler -->
+    <rect x="-15" y="42" width="12" height="6" rx="2" fill="#00f0ff"/>
+    <line x1="-10" y1="48" x2="-8" y2="60" stroke="#00f0ff" stroke-width="3"/>
+  </g>
+
+  <!-- Speed Sparks -->
+  <circle cx="280" cy="380" r="3" fill="#ff00ff" filter="url(#nd-glow)"/>
+  <circle cx="490" cy="390" r="2.5" fill="#00ffff" filter="url(#nd-glow)"/>
+  <circle cx="530" cy="370" r="2" fill="#ffff00" filter="url(#nd-glow)"/>
+  <circle cx="220" cy="360" r="1.5" fill="#00ffff"/>
+
+  <!-- Cyber HUD Elements -->
+  <text x="30" y="45" font-family="'Orbitron', sans-serif" font-weight="800" font-size="20" fill="#00f0ff" letter-spacing="3">NEON DRIFT</text>
+  <text x="30" y="70" font-family="'Chakra Petch', sans-serif" font-weight="600" font-size="12" fill="#ff007f" letter-spacing="4">CYBER RACER // 2088</text>
+  <rect x="700" y="30" width="70" height="24" rx="4" fill="#ff0055" fill-opacity="0.2" stroke="#ff0055" stroke-width="1.5"/>
+  <text x="735" y="46" font-family="'Orbitron', sans-serif" font-weight="700" font-size="11" fill="#ffffff" text-anchor="middle">RACING</text>
+</svg>

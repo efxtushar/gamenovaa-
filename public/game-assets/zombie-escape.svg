@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="ze-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050a08"/>
+      <stop offset="50%" stop-color="#0a1a12"/>
+      <stop offset="100%" stop-color="#1b0808"/>
+    </linearGradient>
+    <radialGradient id="ze-light" cx="0%" cy="50%" r="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="30%" stop-color="#fef08a" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#22c55e" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="ze-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#ze-bg)"/>
+
+  <!-- Abandoned Ruined City Silhouette -->
+  <polygon points="20,300 50,140 100,140 110,300" fill="#040906"/>
+  <polygon points="90,300 120,90 180,90 190,300" fill="#07120a"/>
+  <polygon points="620,300 660,110 720,110 740,300" fill="#040906"/>
+  
+  <!-- Fog / Toxic Green Haze on Street -->
+  <rect x="0" y="300" width="800" height="150" fill="#060f09"/>
+  <ellipse cx="400" cy="350" rx="380" ry="60" fill="#14532d" opacity="0.3" filter="url(#ze-glow)"/>
+
+  <!-- Survivor Running with Flashlight Cone -->
+  <g transform="translate(480, 240)">
+    <!-- Flashlight Beam spreading forward -->
+    <polygon points="15,-15 320,-80 340,110 15,10" fill="url(#ze-light)" opacity="0.85"/>
+
+    <!-- Shadow -->
+    <ellipse cx="0" cy="85" rx="30" ry="8" fill="#000" opacity="0.7"/>
+
+    <!-- Survivor Head & Backpack -->
+    <circle cx="0" cy="-45" r="14" fill="#1e293b"/>
+    <rect x="-18" y="-35" width="10" height="25" rx="3" fill="#854d0e"/> <!-- Backpack -->
+
+    <!-- Jacket / Pants (Running Right) -->
+    <path d="M -12 -32 L 14 -32 L 10 15 L -10 15 Z" fill="#334155"/>
+    <path d="M 6 15 L 25 45 L 45 75" stroke="#1e293b" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M -8 15 L -25 40 L -45 55" stroke="#1e293b" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+    <!-- Shotgun & Flashlight in Hand -->
+    <line x1="8" y1="-15" x2="45" y2="-10" stroke="#475569" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="45" cy="-10" r="5" fill="#facc15" filter="url(#ze-glow)"/>
+  </g>
+
+  <!-- Zombie Horde Approaching from Left (Silhouettes & Glowing Red Eyes) -->
+  <!-- Zombie 1 (Close) -->
+  <g transform="translate(240, 250)">
+    <circle cx="0" cy="-40" r="14" fill="#064e3b"/>
+    <!-- Glowing Red Eyes -->
+    <circle cx="4" cy="-42" r="3" fill="#ef4444" filter="url(#ze-glow)"/>
+    <circle cx="10" cy="-42" r="3" fill="#ef4444" filter="url(#ze-glow)"/>
+    <!-- Torn clothes -->
+    <path d="M -10 -26 L 12 -26 L 8 20 L -8 20 Z" fill="#022c22"/>
+    <!-- Outstretched Claw Arms -->
+    <path d="M 8 -20 L 40 -25 L 60 -18" stroke="#064e3b" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M 0 -15 L 35 -10 L 55 -5" stroke="#064e3b" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- Shuffling Legs -->
+    <line x1="-5" y1="20" x2="-10" y2="75" stroke="#022c22" stroke-width="8" stroke-linecap="round"/>
+    <line x1="5" y1="20" x2="20" y2="70" stroke="#022c22" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Zombie 2 (Mid-distance) -->
+  <g transform="translate(140, 240) scale(0.8)">
+    <circle cx="0" cy="-40" r="14" fill="#064e3b"/>
+    <circle cx="6" cy="-42" r="3" fill="#ef4444" filter="url(#ze-glow)"/>
+    <path d="M -10 -26 L 12 -26 L 8 20 L -8 20 Z" fill="#022c22"/>
+    <path d="M 8 -20 L 45 -22" stroke="#064e3b" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- Zombie 3 (Far) -->
+  <g transform="translate(60, 230) scale(0.65)">
+    <circle cx="0" cy="-40" r="14" fill="#064e3b"/>
+    <circle cx="6" cy="-42" r="3" fill="#ef4444" filter="url(#ze-glow)"/>
+    <path d="M 8 -20 L 40 -15" stroke="#064e3b" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- Hazard Biohazard Symbol Overlay -->
+  <text x="30" y="45" font-family="'Orbitron', sans-serif" font-weight="800" font-size="20" fill="#22c55e" letter-spacing="3">ZOMBIE ESCAPE</text>
+  <text x="30" y="70" font-family="'Chakra Petch', sans-serif" font-weight="600" font-size="12" fill="#ef4444" letter-spacing="4">SURVIVAL HORROR RUNNER</text>
+  <rect x="680" y="30" width="90" height="24" rx="4" fill="#991b1b" fill-opacity="0.2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="725" y="46" font-family="'Orbitron', sans-serif" font-weight="700" font-size="11" fill="#ffffff" text-anchor="middle">HORROR</text>
+</svg>

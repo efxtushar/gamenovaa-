@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="hh-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#02000a"/>
+      <stop offset="50%" stop-color="#140728"/>
+      <stop offset="100%" stop-color="#2a0845"/>
+    </linearGradient>
+    <radialGradient id="hh-moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#fef08a"/>
+      <stop offset="80%" stop-color="#84cc16" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hh-ghost" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#0891b2" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="hh-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Spooky Purple Midnight Sky & Eerie Full Moon -->
+  <rect width="800" height="450" fill="url(#hh-sky)"/>
+  <circle cx="200" cy="110" r="85" fill="url(#hh-moon)" filter="url(#hh-glow)"/>
+
+  <!-- Flying Bats Silhouettes -->
+  <path d="M120,80 Q130,70 140,80 Q150,65 160,80 Q140,90 120,80 Z" fill="#000000"/>
+  <path d="M260,60 Q270,50 280,60 Q290,45 300,60 Q280,70 260,60 Z" fill="#000000"/>
+
+  <!-- Twisted Dead Gnarled Trees -->
+  <path d="M80,350 Q50,220 30,160 Q70,200 90,140 Q90,220 110,250" stroke="#090514" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M720,350 Q750,220 770,150 Q740,190 710,130 Q720,220 700,260" stroke="#090514" stroke-width="12" stroke-linecap="round" fill="none"/>
+
+  <!-- HAUNTED VICTORIAN MANSION (Center Background) -->
+  <g fill="#0c071a" stroke="#1d1136" stroke-width="2">
+    <!-- Mansion Base & Wings -->
+    <rect x="360" y="140" width="220" height="180"/>
+    <!-- Gothic Spire Roofs -->
+    <polygon points="340,140 470,20 600,140" fill="#070310"/>
+    <polygon points="320,170 380,90 440,170" fill="#070310"/>
+    <polygon points="500,170 560,90 620,170" fill="#070310"/>
+
+    <!-- Glowing Yellow Windows with Spiderweb Cracks -->
+    <rect x="445" y="60" width="50" height="60" rx="25" fill="#facc15" filter="url(#hh-glow)"/>
+    <rect x="390" y="190" width="35" height="45" rx="4" fill="#a855f7" filter="url(#hh-glow)"/>
+    <rect x="510" y="190" width="35" height="45" rx="4" fill="#a855f7" filter="url(#hh-glow)"/>
+  </g>
+
+  <!-- Graveyard Hill Ground & Tombstones -->
+  <rect x="0" y="310" width="800" height="140" fill="#070310"/>
+  <ellipse cx="400" cy="330" rx="450" ry="30" fill="#0e071c"/>
+
+  <!-- Tombstones -->
+  <rect x="180" y="290" width="28" height="35" rx="8" fill="#334155"/>
+  <rect x="620" y="295" width="24" height="30" rx="6" fill="#334155"/>
+
+  <!-- SPOOKY POLTERGEIST GHOSTS FLOATING (Left & Right) -->
+  <g transform="translate(320, 200)">
+    <circle cx="0" cy="0" r="32" fill="url(#hh-ghost)" filter="url(#hh-glow)"/>
+    <path d="M-20,0 Q0,45 20,0" fill="#e0f2fe" opacity="0.8"/>
+    <circle cx="-6" cy="-4" r="3.5" fill="#0f172a"/>
+    <circle cx="6" cy="-4" r="3.5" fill="#0f172a"/>
+    <ellipse cx="0" cy="8" rx="5" ry="8" fill="#0f172a"/>
+  </g>
+  <g transform="translate(640, 180)">
+    <circle cx="0" cy="0" r="26" fill="url(#hh-ghost)" filter="url(#hh-glow)"/>
+    <circle cx="-5" cy="-3" r="3" fill="#0f172a"/>
+    <circle cx="5" cy="-3" r="3" fill="#0f172a"/>
+  </g>
+
+  <!-- BRAVE GHOST HUNTER HERO (Left Foreground with Glowing Lantern & Proton Blaster) -->
+  <g transform="translate(240, 270)">
+    <!-- Shadow -->
+    <ellipse cx="0" cy="95" rx="40" ry="12" fill="#000000" opacity="0.8"/>
+
+    <!-- Trench Coat & Boots -->
+    <path d="M-20,15 L-35,90 L35,90 L20,15 Z" fill="#78350f" stroke="#451a03" stroke-width="2"/>
+    <rect x="-12" y="15" width="24" height="50" fill="#1e293b"/>
+
+    <!-- Head & Explorer Fedora Hat -->
+    <circle cx="0" cy="-10" r="16" fill="#fbcfe8"/>
+    <ellipse cx="0" cy="-22" rx="36" ry="10" fill="#451a03" stroke="#290e03" stroke-width="2"/>
+    <ellipse cx="0" cy="-25" rx="18" ry="12" fill="#78350f"/>
+
+    <!-- GLOWING LANTERN ILLUMINATING THE DARK (Held High in Left Hand) -->
+    <path d="M-15,15 L-45,-5 L-40,-25" stroke="#78350f" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <rect x="-55" y="-55" width="26" height="35" rx="4" fill="#facc15" stroke="#ca8a04" stroke-width="2" filter="url(#hh-glow)"/>
+    <polygon points="-58,-55 -42,-70 -26,-55" fill="#ca8a04"/>
+    <!-- Lantern Golden Light Radiance -->
+    <circle cx="-42" cy="-38" r="40" fill="#fef08a" opacity="0.4" filter="url(#hh-glow)"/>
+
+    <!-- PROTON VACUUM / GHOST TRAP BEAM (Shooting at Ghost) -->
+    <path d="M15,20 L45,10 L70,5" stroke="#1e293b" stroke-width="10" stroke-linecap="round" fill="none"/>
+    <!-- Lightning Trap Energy Stream -->
+    <path d="M70,5 Q120,-30 180,-70" stroke="#00f0ff" stroke-width="5" stroke-linecap="round" fill="none" filter="url(#hh-glow)"/>
+    <path d="M70,5 Q120,-30 180,-70" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

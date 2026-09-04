@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mb-space" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#030014"/>
+      <stop offset="50%" stop-color="#0f0728"/>
+      <stop offset="100%" stop-color="#1f093f"/>
+    </linearGradient>
+    <radialGradient id="mb-beam" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#ec4899"/>
+      <stop offset="80%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="mb-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Orbital Space Colony & Earth Horizon -->
+  <rect width="800" height="450" fill="url(#mb-space)"/>
+  <!-- Glowing Blue Earth Limb (Bottom Background) -->
+  <ellipse cx="400" cy="540" rx="600" ry="200" fill="#0284c7" filter="url(#mb-glow)"/>
+  <ellipse cx="400" cy="540" rx="580" ry="190" fill="#0369a1"/>
+
+  <!-- Orbital Ring Space Station -->
+  <g transform="translate(620, 120)">
+    <circle cx="0" cy="0" r="70" fill="none" stroke="#475569" stroke-width="8"/>
+    <circle cx="0" cy="0" r="70" fill="none" stroke="#00f0ff" stroke-width="2" stroke-dasharray="8,12"/>
+    <circle cx="0" cy="0" r="18" fill="#1e293b" stroke="#00f0ff" stroke-width="2"/>
+  </g>
+
+  <!-- BEAM SABER CLASH IMPACT (Bright Plasma Flash Center) -->
+  <circle cx="420" cy="210" r="50" fill="url(#mb-beam)" filter="url(#mb-glow)"/>
+  <circle cx="420" cy="210" r="16" fill="#ffffff"/>
+
+  <!-- WHITE & BLUE GUNDAM HERO MECHA (Left Aerial Flying Pose) -->
+  <g transform="translate(260, 220) rotate(15)">
+    <!-- Thruster Plume (Cyan Fire) -->
+    <ellipse cx="-110" cy="0" rx="45" ry="16" fill="#00f0ff" filter="url(#mb-glow)"/>
+    <ellipse cx="-110" cy="0" rx="20" ry="7" fill="#ffffff"/>
+
+    <!-- Wing / Vernier Thruster Binders -->
+    <polygon points="-70,-65 -20,-30 -80,-10" fill="#2563eb" stroke="#1d4ed8" stroke-width="2"/>
+    <polygon points="-70,65 -20,30 -80,10" fill="#2563eb" stroke="#1d4ed8" stroke-width="2"/>
+
+    <!-- Torso Armor (White & Red Chest Vent) -->
+    <rect x="-30" y="-25" width="60" height="50" rx="4" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <rect x="-15" y="-12" width="30" height="15" fill="#ef4444"/> <!-- Red Chest Cockpit -->
+    <rect x="-20" y="5" width="12" height="10" fill="#f59e0b"/> <!-- Yellow Duct -->
+    <rect x="8" y="5" width="12" height="10" fill="#f59e0b"/>
+
+    <!-- Head Unit with V-Fin Antenna -->
+    <rect x="-12" y="-52" width="24" height="24" rx="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <polygon points="0,-48 -35,-78 -5,-52" fill="#facc15" filter="url(#mb-glow)"/> <!-- Gold V-Fin -->
+    <polygon points="0,-48 35,-78 5,-52" fill="#facc15" filter="url(#mb-glow)"/>
+    <rect x="-8" y="-42" width="16" height="5" fill="#10b981" filter="url(#mb-glow)"/> <!-- Green Sensor Visor -->
+
+    <!-- Arm Extending Forward with HIGH-ENERGY PINK BEAM SABER -->
+    <path d="M15,-15 L65,-5 L105,5" stroke="#f8fafc" stroke-width="12" stroke-linecap="round" fill="none"/>
+    <!-- Glowing Pink Beam Blade (Extending across into clash) -->
+    <line x1="105" y1="5" x2="230" y2="-20" stroke="#ec4899" stroke-width="9" stroke-linecap="round" filter="url(#mb-glow)"/>
+    <line x1="105" y1="5" x2="230" y2="-20" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- ENEMY CRIMSON TITAN MECHA (Right Side Striking Back) -->
+  <g transform="translate(560, 200) rotate(-20)">
+    <!-- Red Vernier Binders -->
+    <polygon points="60,-70 20,-30 80,-10" fill="#991b1b" stroke="#7f1d1d" stroke-width="2"/>
+    <!-- Crimson Armor Body -->
+    <rect x="-30" y="-25" width="60" height="50" rx="4" fill="#b91c1c" stroke="#7f1d1d" stroke-width="2"/>
+    <!-- Mono-Eye Head -->
+    <circle cx="0" cy="-45" r="16" fill="#1e1b4b"/>
+    <circle cx="-6" cy="-45" r="5" fill="#ec4899" filter="url(#mb-glow)"/>
+    <!-- Heavy Heat Hawk Axe / Beam Saber Striking Clash -->
+    <line x1="-30" y1="0" x2="-140" y2="15" stroke="#facc15" stroke-width="10" stroke-linecap="round" filter="url(#mb-glow)"/>
+    <line x1="-30" y1="0" x2="-140" y2="15" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

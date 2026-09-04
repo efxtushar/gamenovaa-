@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cs-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#05030f"/>
+      <stop offset="60%" stop-color="#120826"/>
+      <stop offset="100%" stop-color="#240742"/>
+    </linearGradient>
+    <linearGradient id="cs-blade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="cs-neon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff007f" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="cs-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="cs-blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Dark Sky -->
+  <rect width="800" height="450" fill="url(#cs-bg)"/>
+
+  <!-- Neo Tokyo Megacity Holograms & Highrises -->
+  <polygon points="40,320 60,110 130,110 150,320" fill="#0b081c"/>
+  <polygon points="120,320 140,70 210,70 230,320" fill="#130e2e"/>
+  <polygon points="200,320 220,130 280,130 300,320" fill="#0d0922"/>
+  <polygon points="520,320 540,80 620,80 640,320" fill="#130e2e"/>
+  <polygon points="610,320 630,140 700,140 720,320" fill="#0b081c"/>
+  <polygon points="690,320 710,60 780,60 800,320" fill="#181038"/>
+
+  <!-- Neon Japanese Billboards / Kanji Signs -->
+  <rect x="150" y="90" width="18" height="90" rx="3" fill="#ff007f" filter="url(#cs-glow)" opacity="0.85"/>
+  <rect x="560" y="100" width="16" height="110" rx="3" fill="#00f0ff" filter="url(#cs-glow)" opacity="0.85"/>
+  <circle cx="250" cy="180" r="35" fill="url(#cs-neon)"/>
+  <circle cx="660" cy="190" r="40" fill="url(#cs-neon)"/>
+
+  <!-- Glowing Digital Rain Lines -->
+  <g opacity="0.35" stroke="#00f0ff" stroke-width="1.5" stroke-dasharray="8,14">
+    <line x1="50" y1="0" x2="50" y2="400"/>
+    <line x1="120" y1="20" x2="120" y2="420"/>
+    <line x1="220" y1="0" x2="220" y2="380"/>
+    <line x1="340" y1="40" x2="340" y2="440"/>
+    <line x1="480" y1="10" x2="480" y2="410"/>
+    <line x1="590" y1="30" x2="590" y2="430"/>
+    <line x1="720" y1="0" x2="720" y2="390"/>
+  </g>
+
+  <!-- Wet Rooftop Floor with Reflections -->
+  <rect x="0" y="320" width="800" height="130" fill="#070514"/>
+  <line x1="0" y1="320" x2="800" y2="320" stroke="#00f0ff" stroke-width="3" filter="url(#cs-glow)"/>
+  <ellipse cx="400" cy="380" rx="350" ry="40" fill="#ff007f" opacity="0.15" filter="url(#cs-blur)"/>
+
+  <!-- Cyber Attack Drones (Hostiles in Air) -->
+  <g transform="translate(620, 200)">
+    <polygon points="0,-15 35,-5 25,15 -10,10" fill="#1e1b4b" stroke="#ef4444" stroke-width="2"/>
+    <circle cx="10" cy="0" r="6" fill="#ef4444" filter="url(#cs-glow)"/>
+    <line x1="-15" y1="12" x2="-45" y2="25" stroke="#ef4444" stroke-width="2" filter="url(#cs-glow)"/>
+  </g>
+  <g transform="translate(520, 150)">
+    <polygon points="0,-12 30,-4 20,12 -8,8" fill="#1e1b4b" stroke="#ef4444" stroke-width="2"/>
+    <circle cx="8" cy="0" r="5" fill="#ef4444" filter="url(#cs-glow)"/>
+  </g>
+
+  <!-- Exploding Sliced Rogue Robot (Action Moment) -->
+  <g transform="translate(480, 290)">
+    <!-- Bottom Half -->
+    <path d="M-25,10 L25,10 L30,40 L-30,40 Z" fill="#334155" stroke="#ff0055" stroke-width="2"/>
+    <!-- Sparkles & Sparks -->
+    <circle cx="0" cy="0" r="8" fill="#facc15" filter="url(#cs-glow)"/>
+    <circle cx="15" cy="-15" r="4" fill="#00f0ff" filter="url(#cs-glow)"/>
+    <circle cx="-20" cy="-10" r="5" fill="#ff0055" filter="url(#cs-glow)"/>
+    <!-- Top Half flying off -->
+    <g transform="translate(20, -35) rotate(25)">
+      <rect x="-20" y="-25" width="40" height="30" rx="4" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+      <circle cx="0" cy="-10" r="5" fill="#ef4444" filter="url(#cs-glow)"/>
+    </g>
+  </g>
+
+  <!-- CYBER SAMURAI CHARACTER (Dynamic Action Pose) -->
+  <g transform="translate(260, 260)">
+    <!-- Shadow -->
+    <ellipse cx="0" cy="75" rx="55" ry="12" fill="#000000" opacity="0.8"/>
+
+    <!-- Cyber Cape / Haori flowing left -->
+    <path d="M-15,-20 Q-75,-10 -110,-45 Q-75,40 -20,35 Z" fill="#4c0519" stroke="#ff007f" stroke-width="2"/>
+
+    <!-- Armored Legs in combat stance -->
+    <path d="M-15,25 L-40,65 L-55,75" stroke="#0f172a" stroke-width="14" stroke-linecap="round" fill="none"/>
+    <path d="M-15,25 L-40,65 L-55,75" stroke="#00f0ff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+    <path d="M15,25 L35,55 L60,75" stroke="#0f172a" stroke-width="14" stroke-linecap="round" fill="none"/>
+    <path d="M15,25 L35,55 L60,75" stroke="#00f0ff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+
+    <!-- Torso Cybernetic Armor Plating -->
+    <path d="M-22,-25 L22,-25 L16,28 L-16,28 Z" fill="#1e293b" stroke="#00f0ff" stroke-width="2.5"/>
+    <rect x="-10" y="-15" width="20" height="8" rx="2" fill="#ff007f" filter="url(#cs-glow)"/>
+
+    <!-- Cyber Oni Helmet & Glowing Cyan Visor -->
+    <circle cx="0" cy="-48" r="18" fill="#0f172a" stroke="#475569" stroke-width="2"/>
+    <!-- Oni Horns -->
+    <polygon points="-8,-60 -18,-80 -4,-64" fill="#ff007f" filter="url(#cs-glow)"/>
+    <polygon points="8,-60 18,-80 4,-64" fill="#ff007f" filter="url(#cs-glow)"/>
+    <!-- Glowing Visor Mask -->
+    <path d="M-12,-48 L12,-48 L8,-40 L-8,-40 Z" fill="#00f0ff" filter="url(#cs-glow)"/>
+
+    <!-- Left Arm Forward & Right Arm Slashing -->
+    <path d="M-18,-20 L-45,-5 L-35,15" stroke="#1e293b" stroke-width="10" stroke-linecap="round" fill="none"/>
+    <path d="M18,-20 L55,-35 L85,-45" stroke="#1e293b" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+    <!-- MASSIVE NEON KATANA SLASH WAVE (Arcing across the entire screen) -->
+    <path d="M60,-60 Q180,-110 320,-20 Q220,50 90,0" fill="none" stroke="url(#cs-blade)" stroke-width="12" stroke-linecap="round" filter="url(#cs-glow)"/>
+    <path d="M60,-60 Q180,-110 320,-20 Q220,50 90,0" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Katana Hilt in hand -->
+    <line x1="45" y1="-30" x2="80" y2="-45" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

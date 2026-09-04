@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sw-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#05142b"/>
+      <stop offset="40%" stop-color="#0b2b5c"/>
+      <stop offset="70%" stop-color="#db6012"/>
+      <stop offset="100%" stop-color="#4a1505"/>
+    </linearGradient>
+    <linearGradient id="sw-jet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <filter id="sw-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Sky & Horizon -->
+  <rect width="800" height="450" fill="url(#sw-sky)"/>
+
+  <!-- Sunset sun disk -->
+  <circle cx="580" cy="300" r="110" fill="#f97316" opacity="0.6" filter="url(#sw-glow)"/>
+  <circle cx="580" cy="300" r="70" fill="#fde047" opacity="0.8"/>
+
+  <!-- Mountain Clouds / Strata -->
+  <path d="M 0 350 Q 150 280 320 320 Q 500 250 680 340 L 800 310 L 800 450 L 0 450 Z" fill="#1e1026" opacity="0.9"/>
+  <path d="M 0 380 Q 200 340 400 370 Q 620 320 800 380 L 800 450 L 0 450 Z" fill="#080712"/>
+
+  <!-- Flak & Explosions in Background -->
+  <circle cx="200" cy="140" r="22" fill="#ea580c" opacity="0.6" filter="url(#sw-glow)"/>
+  <circle cx="200" cy="140" r="10" fill="#fef08a"/>
+  <circle cx="680" cy="110" r="16" fill="#ea580c" opacity="0.5" filter="url(#sw-glow)"/>
+
+  <!-- Enemy Jets in Formation -->
+  <g transform="translate(180, 90) scale(0.4) rotate(20)">
+    <polygon points="50,0 20,40 50,30 80,40" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+    <line x1="50" y1="35" x2="50" y2="80" stroke="#f43f5e" stroke-width="4" filter="url(#sw-glow)"/>
+  </g>
+  <g transform="translate(240, 110) scale(0.45) rotate(22)">
+    <polygon points="50,0 20,40 50,30 80,40" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+    <line x1="50" y1="35" x2="50" y2="90" stroke="#f43f5e" stroke-width="4" filter="url(#sw-glow)"/>
+  </g>
+  <g transform="translate(620, 160) scale(0.5) rotate(-30)">
+    <polygon points="50,0 20,40 50,30 80,40" fill="#1e293b" stroke="#f43f5e" stroke-width="2"/>
+    <line x1="50" y1="35" x2="50" y2="100" stroke="#f43f5e" stroke-width="4" filter="url(#sw-glow)"/>
+  </g>
+
+  <!-- Player Fighter Jet (Hero Main) -->
+  <g transform="translate(380, 180) rotate(-12)">
+    <!-- Jet Afterburner Plumes -->
+    <polygon points="-80,18 -190,12 -80,24" fill="#38bdf8" filter="url(#sw-glow)"/>
+    <polygon points="-80,19 -150,15 -80,23" fill="#ffffff"/>
+    <polygon points="-80,-18 -190,-12 -80,-24" fill="#38bdf8" filter="url(#sw-glow)"/>
+    <polygon points="-80,-19 -150,-15 -80,-23" fill="#ffffff"/>
+
+    <!-- Left Wing Missile -->
+    <rect x="-30" y="-70" width="45" height="6" rx="2" fill="#e2e8f0"/>
+    <polygon points="15,-70 25,-67 15,-64" fill="#ef4444"/>
+    <!-- Right Wing Missile -->
+    <rect x="-30" y="64" width="45" height="6" rx="2" fill="#e2e8f0"/>
+    <polygon points="15,64 25,67 15,70" fill="#ef4444"/>
+
+    <!-- Jet Body / Delta Wings -->
+    <!-- Main Wings -->
+    <polygon points="60,0 -40,-85 -70,-80 -30,-15 -70,-30 -80,-10 -60,0 -80,10 -70,30 -30,15 -70,80 -40,85" fill="url(#sw-jet)" stroke="#0284c7" stroke-width="2"/>
+    <!-- Fuselage -->
+    <polygon points="120,0 70,-18 -60,-16 -80,0 -60,16 70,18" fill="#f8fafc" stroke="#0369a1" stroke-width="2"/>
+    <!-- Cockpit Canopy -->
+    <polygon points="50,0 20,-8 -15,-6 -30,0 -15,6 20,8" fill="#0284c7" stroke="#38bdf8" stroke-width="2" filter="url(#sw-glow)"/>
+    <!-- Canards -->
+    <polygon points="80,0 60,-28 45,-26 60,0 45,26 60,28" fill="#38bdf8"/>
+    <!-- Nosecone glow -->
+    <circle cx="120" cy="0" r="3" fill="#38bdf8" filter="url(#sw-glow)"/>
+  </g>
+
+  <!-- Tracer Fire / Lasers -->
+  <line x1="480" y1="160" x2="720" y2="105" stroke="#38bdf8" stroke-width="4" filter="url(#sw-glow)"/>
+  <line x1="475" y1="180" x2="750" y2="120" stroke="#38bdf8" stroke-width="4" filter="url(#sw-glow)"/>
+  <line x1="280" y1="140" x2="350" y2="160" stroke="#f43f5e" stroke-width="3" filter="url(#sw-glow)"/>
+
+  <!-- HUD Overlay -->
+  <text x="30" y="45" font-family="'Orbitron', sans-serif" font-weight="800" font-size="20" fill="#38bdf8" letter-spacing="3">SKY WARRIOR</text>
+  <text x="30" y="70" font-family="'Chakra Petch', sans-serif" font-weight="600" font-size="12" fill="#fb923c" letter-spacing="4">TACTICAL AIR COMBAT</text>
+  <rect x="680" y="30" width="90" height="24" rx="4" fill="#0284c7" fill-opacity="0.2" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="725" y="46" font-family="'Orbitron', sans-serif" font-weight="700" font-size="11" fill="#ffffff" text-anchor="middle">SHOOTER</text>
+</svg>

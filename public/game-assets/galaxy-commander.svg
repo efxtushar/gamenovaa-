@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="gc-space" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#02000d"/>
+      <stop offset="50%" stop-color="#0b0728"/>
+      <stop offset="100%" stop-color="#190d40"/>
+    </linearGradient>
+    <radialGradient id="gc-planet" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="60%" stop-color="#0369a1"/>
+      <stop offset="100%" stop-color="#082f49"/>
+    </radialGradient>
+    <filter id="gc-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Deep Cosmic Starfield -->
+  <rect width="800" height="450" fill="url(#gc-space)"/>
+
+  <!-- Glowing Ringed Gas Giant Planet (Top Right) -->
+  <circle cx="650" cy="110" r="80" fill="url(#gc-planet)"/>
+  <ellipse cx="650" cy="110" rx="140" ry="18" fill="#38bdf8" opacity="0.6" transform="rotate(-18 650 110)"/>
+
+  <!-- Twinkling Distant Stars -->
+  <circle cx="80" cy="60" r="2" fill="#ffffff"/>
+  <circle cx="220" cy="120" r="3" fill="#38bdf8"/>
+  <circle cx="340" cy="40" r="1.5" fill="#ffffff"/>
+  <circle cx="480" cy="90" r="2" fill="#ec4899"/>
+
+  <!-- MASSIVE FLAGSHIP BATTLECRUISER (Center Hero Stage) -->
+  <g transform="translate(360, 240)">
+    <!-- Main Hull Arrowhead / Wedge -->
+    <polygon points="-160,-20 180,-10 240,0 180,10 -160,20 -180,0" fill="#1e293b" stroke="#334155" stroke-width="3"/>
+    <!-- Upper Command Deck & Bridge Tower -->
+    <polygon points="-80,-45 40,-35 60,-15 -100,-15" fill="#0f172a" stroke="#00f0ff" stroke-width="2"/>
+    <!-- Glowing Bridge Viewport Windows -->
+    <line x1="-20" y1="-30" x2="40" y2="-25" stroke="#00f0ff" stroke-width="4" filter="url(#gc-glow)"/>
+
+    <!-- Wing Flanks & Heavy Armor Plating -->
+    <polygon points="-120,-70 20,-30 0,-15 -140,-40" fill="#334155"/>
+    <polygon points="-120,70 20,30 0,15 -140,40" fill="#334155"/>
+
+    <!-- Heavy Dual Plasma Turrets Firing Laser Beams -->
+    <!-- Forward Laser Cannons (Cyan Laser Barrage) -->
+    <line x1="180" y1="-10" x2="480" y2="-40" stroke="#00f0ff" stroke-width="5" stroke-linecap="round" filter="url(#gc-glow)"/>
+    <line x1="180" y1="10" x2="480" y2="40" stroke="#00f0ff" stroke-width="5" stroke-linecap="round" filter="url(#gc-glow)"/>
+    <line x1="240" y1="0" x2="520" y2="0" stroke="#ffffff" stroke-width="4" stroke-linecap="round" filter="url(#gc-glow)"/>
+
+    <!-- Warp Drive Thruster Fire (Cyan Exhaust Plume) -->
+    <ellipse cx="-185" cy="0" rx="35" ry="12" fill="#00f0ff" filter="url(#gc-glow)"/>
+    <ellipse cx="-185" cy="0" rx="14" ry="6" fill="#ffffff"/>
+  </g>
+
+  <!-- ESCORT FIGHTER FLEET SQUADRONS (Flanking Left & Right) -->
+  <g transform="translate(140, 140)">
+    <polygon points="-30,-10 20,0 -30,10" fill="#475569" stroke="#00f0ff" stroke-width="1.5"/>
+    <line x1="20" y1="0" x2="120" y2="-10" stroke="#00f0ff" stroke-width="3" filter="url(#gc-glow)"/>
+  </g>
+  <g transform="translate(180, 340)">
+    <polygon points="-30,-10 20,0 -30,10" fill="#475569" stroke="#00f0ff" stroke-width="1.5"/>
+    <line x1="20" y1="0" x2="120" y2="10" stroke="#00f0ff" stroke-width="3" filter="url(#gc-glow)"/>
+  </g>
+
+  <!-- ENEMY CRUSER EXPLODING IN DISTANCE (Orange Blast Shockwave) -->
+  <circle cx="680" cy="280" r="35" fill="#f97316" filter="url(#gc-glow)"/>
+  <circle cx="680" cy="280" r="15" fill="#fef08a" filter="url(#gc-glow)"/>
+  <polygon points="650,260 710,290 670,310" fill="#0f172a"/>
+</svg>

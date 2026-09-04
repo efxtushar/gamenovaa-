@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rr-space" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#03001e"/>
+      <stop offset="40%" stop-color="#7303c0"/>
+      <stop offset="80%" stop-color="#ec38bc"/>
+      <stop offset="100%" stop-color="#fdeff9"/>
+    </linearGradient>
+    <radialGradient id="rr-flame" cx="50%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="30%" stop-color="#00ffff"/>
+      <stop offset="70%" stop-color="#ff007f"/>
+      <stop offset="100%" stop-color="#7303c0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="rr-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <rect width="800" height="450" fill="#070314"/>
+
+  <!-- Distant Nebula Cloud -->
+  <path d="M 100 120 Q 300 40 500 160 Q 700 280 600 380 Q 300 420 180 320 Z" fill="url(#rr-space)" opacity="0.4" filter="url(#rr-glow)"/>
+
+  <!-- Giant Ringed Planet -->
+  <g transform="translate(640, 130)">
+    <circle cx="0" cy="0" r="70" fill="#a855f7"/>
+    <!-- Planet stripes -->
+    <path d="M -60 -20 Q 0 0 60 -20" stroke="#7e22ce" stroke-width="12" fill="none"/>
+    <path d="M -68 15 Q 0 35 68 15" stroke="#6b21a8" stroke-width="14" fill="none"/>
+    <!-- Planet Ring -->
+    <ellipse cx="0" cy="0" rx="120" ry="32" fill="none" stroke="#f472b6" stroke-width="8" transform="rotate(-20)" opacity="0.8"/>
+  </g>
+
+  <!-- Glowing Asteroids -->
+  <g transform="translate(160, 280) rotate(15)">
+    <polygon points="0,-40 35,-25 45,15 20,40 -25,35 -40,0 -20,-35" fill="#334155" stroke="#94a3b8" stroke-width="3"/>
+    <circle cx="-10" cy="-10" r="6" fill="#1e293b"/>
+    <circle cx="15" cy="15" r="8" fill="#1e293b"/>
+  </g>
+  <g transform="translate(240, 110) scale(0.6) rotate(45)">
+    <polygon points="0,-40 35,-25 45,15 20,40 -25,35 -40,0 -20,-35" fill="#334155" stroke="#94a3b8" stroke-width="3"/>
+  </g>
+
+  <!-- Hyperspace Warp Lines -->
+  <line x1="80" y1="50" x2="160" y2="90" stroke="#38bdf8" stroke-width="2" opacity="0.6"/>
+  <line x1="420" y1="30" x2="480" y2="60" stroke="#ec4899" stroke-width="3" opacity="0.8"/>
+  <line x1="720" y1="310" x2="620" y2="260" stroke="#38bdf8" stroke-width="2" opacity="0.5"/>
+
+  <!-- Rocket Ship -->
+  <g transform="translate(380, 240) rotate(-35)">
+    <!-- Plasma Exhaust Thruster Fire -->
+    <polygon points="-16,70 0,220 16,70" fill="url(#rr-flame)" filter="url(#rr-glow)"/>
+    <polygon points="-8,70 0,160 8,70" fill="#ffffff" filter="url(#rr-glow)"/>
+
+    <!-- Left / Right Rocket Fins -->
+    <polygon points="-38,65 -16,30 -16,68 -30,85" fill="#ec4899" stroke="#be185d" stroke-width="2"/>
+    <polygon points="38,65 16,30 16,68 30,85" fill="#ec4899" stroke="#be185d" stroke-width="2"/>
+
+    <!-- Rocket Fuselage -->
+    <path d="M 0 -85 C 35 -20 32 65 24 70 L -24 70 C -32 65 -35 -20 0 -85 Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+    
+    <!-- Red Nose Cone -->
+    <path d="M 0 -85 C 16 -50 16 -35 18 -25 L -18 -25 C -16 -35 -16 -50 0 -85 Z" fill="#ef4444"/>
+
+    <!-- Cockpit Porthole Window -->
+    <circle cx="0" cy="5" r="18" fill="#0284c7" stroke="#38bdf8" stroke-width="3" filter="url(#rr-glow)"/>
+    <circle cx="0" cy="5" r="13" fill="#0ea5e9"/>
+    <ellipse cx="-4" cy="0" rx="6" ry="3" fill="#ffffff" opacity="0.7" transform="rotate(-30 -4 0)"/>
+
+    <!-- Cyber Racing Stripes -->
+    <rect x="-24" y="38" width="48" height="6" fill="#06b6d4"/>
+    <rect x="-24" y="48" width="48" height="4" fill="#ec4899"/>
+  </g>
+
+  <!-- Titles -->
+  <text x="30" y="45" font-family="'Orbitron', sans-serif" font-weight="800" font-size="20" fill="#f472b6" letter-spacing="3">ROCKET RUSH</text>
+  <text x="30" y="70" font-family="'Chakra Petch', sans-serif" font-weight="600" font-size="12" fill="#38bdf8" letter-spacing="4">HYPERSPACE DODGE</text>
+  <rect x="690" y="30" width="80" height="24" rx="4" fill="#ec4899" fill-opacity="0.2" stroke="#f472b6" stroke-width="1.5"/>
+  <text x="730" y="46" font-family="'Orbitron', sans-serif" font-weight="700" font-size="11" fill="#ffffff" text-anchor="middle">ARCADE</text>
+</svg>

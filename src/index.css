@@ -1,0 +1,225 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * GAMENOVA design system — dark arcade console.
+ * Deep space-charcoal surfaces, electric cyan primary, plasma magenta accent.
+ * All colors are oklch tokens. Never hardcode colors in components.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --font-display: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.16 0.028 264);
+  --foreground: oklch(0.96 0.008 260);
+  --surface: oklch(0.21 0.032 264);
+  --surface-2: oklch(0.25 0.036 264);
+  --card: oklch(0.21 0.032 264);
+  --card-foreground: oklch(0.96 0.008 260);
+  --popover: oklch(0.2 0.032 264);
+  --popover-foreground: oklch(0.96 0.008 260);
+  --primary: oklch(0.82 0.16 195);
+  --primary-foreground: oklch(0.16 0.03 250);
+  --secondary: oklch(0.27 0.04 264);
+  --secondary-foreground: oklch(0.95 0.01 260);
+  --muted: oklch(0.26 0.032 264);
+  --muted-foreground: oklch(0.71 0.03 262);
+  --accent: oklch(0.7 0.24 335);
+  --accent-foreground: oklch(0.98 0.01 330);
+  --destructive: oklch(0.63 0.23 22);
+  --destructive-foreground: oklch(0.98 0.01 20);
+  --success: oklch(0.75 0.18 155);
+  --success-foreground: oklch(0.17 0.03 160);
+  --warning: oklch(0.83 0.16 85);
+  --warning-foreground: oklch(0.2 0.04 80);
+  --border: oklch(0.32 0.035 264);
+  --input: oklch(0.3 0.035 264);
+  --ring: oklch(0.82 0.16 195);
+  --chart-1: oklch(0.82 0.16 195);
+  --chart-2: oklch(0.7 0.24 335);
+  --chart-3: oklch(0.83 0.16 85);
+  --chart-4: oklch(0.75 0.18 155);
+  --chart-5: oklch(0.63 0.23 22);
+  --sidebar: oklch(0.19 0.03 264);
+  --sidebar-foreground: oklch(0.95 0.01 260);
+  --sidebar-primary: oklch(0.82 0.16 195);
+  --sidebar-primary-foreground: oklch(0.16 0.03 250);
+  --sidebar-accent: oklch(0.26 0.032 264);
+  --sidebar-accent-foreground: oklch(0.95 0.01 260);
+  --sidebar-border: oklch(0.32 0.035 264);
+  --sidebar-ring: oklch(0.82 0.16 195);
+
+  --gradient-nova: linear-gradient(
+    120deg,
+    oklch(0.82 0.16 195) 0%,
+    oklch(0.7 0.24 335) 100%
+  );
+  --gradient-surface: linear-gradient(
+    170deg,
+    oklch(0.24 0.036 264) 0%,
+    oklch(0.18 0.03 264) 100%
+  );
+  --glow-primary: 0 0 0 1px oklch(0.82 0.16 195 / 35%), 0 12px 40px -12px oklch(0.82 0.16 195 / 55%);
+  --glow-accent: 0 0 0 1px oklch(0.7 0.24 335 / 35%), 0 12px 40px -12px oklch(0.7 0.24 335 / 55%);
+  --shadow-card: 0 20px 50px -24px oklch(0.08 0.02 264 / 90%);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    background-image:
+      radial-gradient(60rem 40rem at 15% -10%, oklch(0.82 0.16 195 / 12%), transparent 60%),
+      radial-gradient(50rem 36rem at 95% 0%, oklch(0.7 0.24 335 / 14%), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* Locked while a game is running so arrows/space never scroll the page. */
+  body[data-game-active="true"] {
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+}
+
+@utility text-nova {
+  background: var(--gradient-nova);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-nova {
+  background: var(--gradient-nova);
+}
+
+@utility surface-panel {
+  background: var(--gradient-surface);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+}
+
+@utility glow-primary {
+  box-shadow: var(--glow-primary);
+}
+
+@utility glow-accent {
+  box-shadow: var(--glow-accent);
+}
+
+@utility hud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid oklch(1 0 0 / 12%);
+  background: oklch(0.16 0.028 264 / 72%);
+  backdrop-filter: blur(8px);
+  padding: 0.25rem 0.7rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-foreground);
+}
+/* GAMENOVA - Zombie Escape Premium UI */
+.zombie-escape{position:relative;width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#090b0f;color:#f5f7fa;font-family:Inter,ui-sans-serif,system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+.zombie-escape canvas{display:block;width:100%;height:100%;max-width:none;object-fit:contain}
+.zombie-escape__hud{position:absolute;inset:0;pointer-events:none;z-index:10}
+.zombie-escape__stats{position:absolute;top:18px;left:18px;display:flex;gap:10px;flex-wrap:wrap}
+.zombie-escape__stat{min-width:88px;padding:9px 12px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(9,12,17,.72);box-shadow:0 8px 28px rgba(0,0,0,.32);backdrop-filter:blur(12px)}
+.zombie-escape__stat-label{display:block;margin-bottom:3px;color:rgba(235,240,245,.58);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.zombie-escape__stat-value{display:block;color:#fff;font-size:17px;font-weight:800;line-height:1}
+.zombie-escape__health{min-width:150px}
+.zombie-escape__health-bar{width:100%;height:5px;margin-top:8px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.1)}
+.zombie-escape__health-fill{width:100%;height:100%;border-radius:inherit;background:#e24b4b;transition:width .16s ease}
+.zombie-escape__controls{position:absolute;top:18px;right:18px;display:flex;gap:8px;pointer-events:auto}
+.zombie-escape__button{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:rgba(9,12,17,.72);color:#f5f7fa;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.28);backdrop-filter:blur(12px);transition:transform .16s ease,background .16s ease,border-color .16s ease}
+.zombie-escape__button:hover{transform:translateY(-1px);background:rgba(24,28,36,.9);border-color:rgba(139,92,246,.55)}
+.zombie-escape__reload{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);min-width:150px;padding:10px 16px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(9,12,17,.76);color:#f5f7fa;text-align:center;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 10px 30px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+.zombie-escape__reload[hidden],.zombie-escape__hidden{display:none!important}
+.zombie-escape__reload-bar{width:100%;height:3px;margin-top:7px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.1)}
+.zombie-escape__reload-progress{width:0%;height:100%;border-radius:inherit;background:#a78bfa}
+.zombie-escape__crosshair{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);opacity:.72}
+.zombie-escape__crosshair:before,.zombie-escape__crosshair:after{content:"";position:absolute;left:50%;top:50%;background:rgba(255,255,255,.9)}
+.zombie-escape__crosshair:before{width:2px;height:22px;transform:translate(-50%,-50%)}
+.zombie-escape__crosshair:after{width:22px;height:2px;transform:translate(-50%,-50%)}
+.zombie-escape__overlay{position:absolute;inset:0;display:grid;place-items:center;padding:24px;background:rgba(3,5,8,.72);backdrop-filter:blur(7px);z-index:30}
+.zombie-escape__panel{width:min(440px,100%);padding:28px;border:1px solid rgba(255,255,255,.1);border-radius:20px;background:rgba(12,15,21,.94);box-shadow:0 24px 70px rgba(0,0,0,.55);text-align:center}
+.zombie-escape__title{margin:0;font-size:clamp(26px,5vw,42px);font-weight:900;letter-spacing:-.04em}
+.zombie-escape__subtitle{margin:9px 0 22px;color:rgba(235,240,245,.58);font-size:14px}
+.zombie-escape__primary{min-height:46px;padding:0 20px;border:0;border-radius:11px;background:#7c3aed;color:#fff;font-weight:800;cursor:pointer}
+@media(max-width:700px){.zombie-escape__stats{top:10px;left:10px;right:10px;gap:6px}.zombie-escape__stat{min-width:70px;padding:7px 9px}.zombie-escape__stat-value{font-size:14px}.zombie-escape__controls{top:auto;right:10px;bottom:10px}.zombie-escape__button{width:38px;height:38px}.zombie-escape__reload{bottom:62px}}

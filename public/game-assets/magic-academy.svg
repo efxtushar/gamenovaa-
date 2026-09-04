@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="100%" height="100%">
+  <defs>
+    <linearGradient id="magicBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#3b0764" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#magicBg)" />
+  <!-- Spire Towers -->
+  <polygon points="80,360 120,80 160,360" fill="#2e1065" opacity="0.8" />
+  <polygon points="480,360 520,100 560,360" fill="#2e1065" opacity="0.8" />
+  <!-- Falling Runes -->
+  <circle cx="200" cy="90" r="22" fill="#f97316" stroke="#fff" stroke-width="2" />
+  <circle cx="440" cy="110" r="22" fill="#38bdf8" stroke="#fff" stroke-width="2" />
+  <circle cx="320" cy="70" r="22" fill="#c084fc" stroke="#fff" stroke-width="2" />
+  <!-- Arch-Mage Character -->
+  <g transform="translate(320, 270)">
+    <!-- Wizard Hat -->
+    <polygon points="0,-80 -25,-30 25,-30" fill="#7e22ce" stroke="#d8b4fe" stroke-width="2" />
+    <!-- Robes -->
+    <polygon points="0,-30 -35,50 35,50" fill="#6b21a8" />
+    <!-- Wand with Arcane Spark -->
+    <line x1="25" y1="20" x2="55" y2="-50" stroke="#facc15" stroke-width="4" />
+    <circle cx="55" cy="-50" r="12" fill="#38bdf8" />
+  </g>
+</svg>

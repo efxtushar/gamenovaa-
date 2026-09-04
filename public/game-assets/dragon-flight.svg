@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="df-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0c0721"/>
+      <stop offset="40%" stop-color="#3b0764"/>
+      <stop offset="80%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <linearGradient id="df-fire" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="30%" stop-color="#f59e0b"/>
+      <stop offset="70%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#7f1d1d" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="df-wing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#064e3b"/>
+    </linearGradient>
+    <radialGradient id="df-moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffedd5"/>
+      <stop offset="70%" stop-color="#fdba74"/>
+      <stop offset="100%" stop-color="#ea580c" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="df-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Sky & Celestial Sun -->
+  <rect width="800" height="450" fill="url(#df-sky)"/>
+  <circle cx="620" cy="140" r="90" fill="url(#df-moon)" filter="url(#df-glow)"/>
+
+  <!-- Jagged Volcanic Peaks / Fantasy Mountains -->
+  <polygon points="-40,450 120,240 280,450" fill="#1e1035" opacity="0.9"/>
+  <polygon points="140,450 320,180 500,450" fill="#2e1045" opacity="0.95"/>
+  <polygon points="420,450 580,220 740,450" fill="#1a082b"/>
+  <polygon points="560,450 680,260 840,450" fill="#10051d"/>
+
+  <!-- Glowing Magma Rivers along Mountain Cracks -->
+  <path d="M320,220 Q360,290 340,360 Q380,410 400,450" stroke="#f97316" stroke-width="4" fill="none" filter="url(#df-glow)"/>
+  <path d="M120,270 Q160,330 180,450" stroke="#ef4444" stroke-width="3" fill="none" filter="url(#df-glow)"/>
+
+  <!-- Dramatic Clouds & Smoke -->
+  <ellipse cx="200" cy="420" rx="250" ry="60" fill="#431407" opacity="0.5"/>
+  <ellipse cx="600" cy="440" rx="300" ry="70" fill="#431407" opacity="0.6"/>
+
+  <!-- DRAGON & DRAGON RIDER HERO IN FLIGHT (Center Stage) -->
+  <g transform="translate(340, 210) rotate(-8)">
+    <!-- Back Wing -->
+    <path d="M-40,-30 L-120,-160 L-30,-90 L50,-140 L30,-40 Z" fill="url(#df-wing)" stroke="#064e3b" stroke-width="3"/>
+
+    <!-- Dragon Long Spiked Tail -->
+    <path d="M-60,10 Q-150,40 -220,10 Q-160,-10 -70,-5 Z" fill="#047857"/>
+    <polygon points="-180,15 -210,0 -200,30" fill="#f59e0b"/>
+    <polygon points="-140,22 -160,10 -150,32" fill="#f59e0b"/>
+
+    <!-- Dragon Muscular Body -->
+    <ellipse cx="0" cy="0" rx="85" ry="40" fill="#059669" stroke="#047857" stroke-width="3"/>
+    <ellipse cx="25" cy="5" rx="55" ry="25" fill="#10b981"/>
+
+    <!-- Front Left Wing (Expansive Membrane) -->
+    <path d="M-10,-10 L-90,-180 L20,-110 L120,-160 L70,-15 Z" fill="url(#df-wing)" stroke="#34d399" stroke-width="4"/>
+    <line x1="-10" y1="-10" x2="-90" y2="-180" stroke="#34d399" stroke-width="4"/>
+    <line x1="-10" y1="-10" x2="20" y2="-110" stroke="#34d399" stroke-width="3"/>
+    <line x1="-10" y1="-10" x2="120" y2="-160" stroke="#34d399" stroke-width="3"/>
+
+    <!-- Dragon Head & Jaws -->
+    <path d="M60,-20 L130,-40 L160,-20 L140,15 L70,10 Z" fill="#059669" stroke="#047857" stroke-width="2"/>
+    <!-- Golden Horns -->
+    <polygon points="90,-35 120,-75 110,-30" fill="#f59e0b" filter="url(#df-glow)"/>
+    <polygon points="75,-30 95,-65 90,-25" fill="#fbbf24"/>
+    <!-- Glowing Dragon Eye -->
+    <circle cx="115" cy="-25" r="6" fill="#fef08a" filter="url(#df-glow)"/>
+
+    <!-- ARMORED DRAGON RIDER HERO (On the Saddle) -->
+    <g transform="translate(0, -38)">
+      <!-- Saddle & Stirrups -->
+      <rect x="-16" y="8" width="32" height="12" rx="4" fill="#78350f"/>
+      <!-- Rider Cape Flying in Wind -->
+      <path d="M-12,-10 Q-60,-25 -95,-10 Q-60,10 -10,5 Z" fill="#dc2626"/>
+      <!-- Silver Plate Armor -->
+      <rect x="-8" y="-12" width="16" height="22" rx="3" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+      <!-- Knight Helmet & Golden Plume -->
+      <circle cx="0" cy="-20" r="9" fill="#94a3b8"/>
+      <path d="M-4,-28 Q-25,-35 -35,-20" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" fill="none"/>
+      <!-- Lance / Dragon Staff with Magical Gem -->
+      <line x1="8" y1="-8" x2="90" y2="-45" stroke="#fef08a" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="90" cy="-45" r="8" fill="#38bdf8" filter="url(#df-glow)"/>
+    </g>
+
+    <!-- INFERNAL DRAGON FIRE BREATH BLAST (Roaring Right) -->
+    <path d="M145,-15 Q260,-50 380,20 Q240,70 140,5 Z" fill="url(#df-fire)" opacity="0.95" filter="url(#df-glow)"/>
+    <circle cx="160" cy="-5" r="18" fill="#ffffff" filter="url(#df-glow)"/>
+  </g>
+</svg>

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="ffz-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="50%" stop-color="#0f172a"/>
+      <stop offset="85%" stop-color="#0369a1"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="ffz-sea" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="40%" stop-color="#0369a1"/>
+      <stop offset="80%" stop-color="#0c4a6e"/>
+      <stop offset="100%" stop-color="#021f30"/>
+    </linearGradient>
+    <linearGradient id="ffz-fish" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <radialGradient id="ffz-glow-light" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="ffz-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Stormy Sea Sky with Lightning -->
+  <rect width="800" height="450" fill="url(#ffz-sky)"/>
+  <polygon points="420,0 410,70 435,70 400,160 415,100 395,100" fill="#fef08a" filter="url(#ffz-glow)"/>
+
+  <!-- Distant Storm Clouds -->
+  <ellipse cx="250" cy="100" rx="180" ry="50" fill="#1e293b" opacity="0.8"/>
+  <ellipse cx="550" cy="80" rx="200" ry="60" fill="#0f172a" opacity="0.9"/>
+
+  <!-- Turbulent Sea Waves -->
+  <rect x="0" y="240" width="800" height="210" fill="url(#ffz-sea)"/>
+  <path d="M0,260 Q150,220 300,260 T600,260 T800,250 L800,450 L0,450 Z" fill="#0284c7" opacity="0.8"/>
+  <path d="M0,290 Q200,250 400,290 T800,280 L800,450 L0,450 Z" fill="#0369a1" opacity="0.9"/>
+
+  <!-- Splash Spray Effects on Sea -->
+  <ellipse cx="600" cy="280" rx="90" ry="25" fill="#e0f2fe" opacity="0.7" filter="url(#ffz-glow)"/>
+  <circle cx="560" cy="220" r="8" fill="#ffffff"/>
+  <circle cx="630" cy="200" r="10" fill="#ffffff"/>
+  <circle cx="670" cy="240" r="7" fill="#ffffff"/>
+
+  <!-- GIANT LEAPING BLUE MARLIN / MONSTER FISH (Right Action Moment) -->
+  <g transform="translate(600, 180) rotate(-35)">
+    <!-- Powerful Muscular Body -->
+    <ellipse cx="0" cy="0" rx="95" ry="40" fill="url(#ffz-fish)" stroke="#0284c7" stroke-width="3"/>
+    <!-- Pale Silver Belly -->
+    <path d="M-80,5 Q0,45 80,5 Q0,15 -80,5 Z" fill="#e0f2fe"/>
+    <!-- Sailfish Dorsal Fin High -->
+    <polygon points="-50,-35 -10,-95 40,-35" fill="#0284c7" stroke="#00f0ff" stroke-width="2"/>
+    <polygon points="-75,-25 -40,-80 -20,-30" fill="#0369a1"/>
+    <!-- Sharp Bill / Sword Snout -->
+    <polygon points="85,-10 170,-18 85,2" fill="#0c4a6e"/>
+    <!-- Glowing Golden Eye -->
+    <circle cx="65" cy="-12" r="8" fill="#facc15" filter="url(#ffz-glow)"/>
+    <circle cx="67" cy="-12" r="4" fill="#000000"/>
+    <!-- Crescent Tail Fin -->
+    <path d="M-85,0 L-140,-45 L-115,0 L-140,45 Z" fill="#0369a1" stroke="#00f0ff" stroke-width="2"/>
+
+    <!-- Hook in Jaw with Glowing Line -->
+    <circle cx="95" cy="0" r="6" fill="#f59e0b" filter="url(#ffz-glow)"/>
+  </g>
+
+  <!-- FISHING BOAT (Trawler / Motor Skiff in the Waves) -->
+  <g transform="translate(260, 260) rotate(8)">
+    <!-- Wooden / Fiberglass Hull -->
+    <path d="M-100,-15 L100,-15 L80,35 L-70,35 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="3"/>
+    <rect x="-85" y="-5" width="170" height="8" fill="#ef4444"/> <!-- Red Racing Stripe -->
+
+    <!-- Cabin & Radar Arch -->
+    <rect x="-60" y="-55" width="55" height="40" rx="4" fill="#0f172a"/>
+    <rect x="-50" y="-45" width="35" height="20" rx="2" fill="#38bdf8" opacity="0.8"/>
+    <line x1="-32" y1="-55" x2="-32" y2="-75" stroke="#facc15" stroke-width="3"/> <!-- Antenna -->
+
+    <!-- FISHERMAN HERO (Fighting the Big Catch with Rod Bent Double) -->
+    <g transform="translate(45, -25)">
+      <!-- Yellow Waterproof Slicker & Cap -->
+      <path d="M-15,10 L-20,40 L20,40 L15,10 Z" fill="#facc15" stroke="#eab308" stroke-width="2"/>
+      <!-- Head & Fisherman Beanie -->
+      <circle cx="0" cy="-6" r="14" fill="#fbcfe8"/>
+      <ellipse cx="0" cy="-16" rx="16" ry="7" fill="#facc15"/>
+      <circle cx="4" cy="-8" r="2.5" fill="#000000"/>
+      <!-- Straining Arms Holding Heavy Rod -->
+      <path d="M-10,12 L18,-5 L35,-15" stroke="#facc15" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+      <!-- HEAVY-DUTY CARBON FIBER FISHING ROD (Bent in Huge Arc) -->
+      <path d="M10,25 Q60,-40 140,-90" stroke="#1e293b" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <circle cx="15" cy="20" r="7" fill="#f59e0b"/> <!-- Reel -->
+
+      <!-- HIGH-TENSION TAUT FISHING LINE (Connecting Rod Tip to Giant Fish) -->
+      <path d="M140,-90 Q300,-110 430,-20" stroke="#fef08a" stroke-width="3" stroke-linecap="round" fill="none" filter="url(#ffz-glow)"/>
+    </g>
+  </g>
+</svg>
