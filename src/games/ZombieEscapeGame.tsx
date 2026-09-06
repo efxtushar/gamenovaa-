@@ -17,7 +17,8 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   X,
-  Flame
+  Flame,
+  ArrowUp
 } from 'lucide-react';
 import '../styles/zombie-escape.css';
 import { buildAbandonedCity, CityObstacle } from './zombie3d/cityBuilder';
@@ -132,6 +133,8 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       fire: boolean;
       reload: boolean;
     };
+    isJumping: boolean;
+    jumpVelocityY: number;
     cameraTargetPos: THREE.Vector3;
     cameraLookPos: THREE.Vector3;
     nextZombieId: number;
@@ -174,6 +177,8 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       fire: false,
       reload: false
     },
+    isJumping: false,
+    jumpVelocityY: 0,
     cameraTargetPos: new THREE.Vector3(0, 2.8, -5.0),
     cameraLookPos: new THREE.Vector3(0, 1.45, 0),
     nextZombieId: 1,
@@ -242,26 +247,26 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.35; // 25-35% brighter overall scene visibility
+    renderer.toneMappingExposure = 1.70; // 25-35% boosted visibility for clear night-time gameplay
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     container.appendChild(renderer.domElement);
 
-    // 2. Scene with Vibrant Cyberpunk Midnight Atmosphere and Clearer Fog
+    // 2. Scene with Atmospheric Midnight Sky and Soft Blue Ambient Fog
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x121c2d);
-    scene.fog = new THREE.FogExp2(0x152236, 0.0075); // Clearer sightline fog: prevents distant black wall
+    scene.background = new THREE.Color(0x131f33);
+    scene.fog = new THREE.FogExp2(0x18243b, 0.005); // Soft atmospheric mist: keeps buildings and zombies clearly visible
 
     // 3. Camera (56° FOV frames roadway cleanly, minimizing empty sky)
     const camera = new THREE.PerspectiveCamera(56, width / height, 0.1, 300);
     camera.position.set(0, 2.8, -4.8);
 
     // 4. Lighting (Enhanced Hemisphere Sky/Ground Ambient + Cool Moonlight + Back Fill)
-    const hemiLight = new THREE.HemisphereLight(0x7fa2cc, 0x33445c, 2.2);
+    const hemiLight = new THREE.HemisphereLight(0x94b8e8, 0x475569, 2.9);
     scene.add(hemiLight);
 
-    const moonLight = new THREE.DirectionalLight(0xcce0ff, 2.8);
+    const moonLight = new THREE.DirectionalLight(0xdbeafe, 3.4);
     moonLight.position.set(25, 45, -30);
     moonLight.castShadow = true;
     moonLight.shadow.mapSize.width = 1024;
@@ -275,7 +280,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     scene.add(moonLight);
 
     // Secondary opposing rim/fill light to ensure character & zombie silhouettes never blend into black
-    const fillLight = new THREE.DirectionalLight(0x60789d, 1.6);
+    const fillLight = new THREE.DirectionalLight(0x7ea0c7, 2.2);
     fillLight.position.set(-25, 30, 35);
     scene.add(fillLight);
 
@@ -286,7 +291,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     // 6. Build 3D Player Character
     const player = createPlayerMesh();
     // Dedicated soft 360° player aura light so player and nearby zombies are clearly highlighted
-    const playerAuraLight = new THREE.PointLight(0x38bdf8, 2.2, 11);
+    const playerAuraLight = new THREE.PointLight(0x38bdf8, 3.0, 16);
     playerAuraLight.position.set(0, 1.6, 0);
     player.group.add(playerAuraLight);
     scene.add(player.group);
@@ -327,6 +332,20 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       renderer.dispose();
     };
   }, []);
+
+  // -------------------------------------------------------------
+  // JUMP LOGIC (RESPONSIVE, NO INFINITE JUMPING)
+  // -------------------------------------------------------------
+  const triggerJump = useCallback(() => {
+    const eng = engineRef.current;
+    if (gameMode !== 'PLAYING') return;
+    // Only jump if grounded on pavement (prevent infinite jumping)
+    if (!eng.isJumping && eng.playerPos.y <= 0.05) {
+      eng.isJumping = true;
+      eng.jumpVelocityY = 6.6; // Crisp responsive jump arc
+      zombieAudio.playJump();
+    }
+  }, [gameMode]);
 
   // -------------------------------------------------------------
   // RELOAD LOGIC (EXACT 1.4 SECONDS WITH PROGRESS)
@@ -605,7 +624,8 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           startReload();
           break;
         case 'Space':
-          eng.keys.fire = true;
+          e.preventDefault();
+          triggerJump();
           break;
         case 'KeyP':
         case 'Escape':
@@ -631,9 +651,6 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         case 'KeyD':
         case 'ArrowRight':
           eng.keys.right = false;
-          break;
-        case 'Space':
-          eng.keys.fire = false;
           break;
       }
     };
@@ -662,9 +679,13 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       if (Math.abs(dy) < deadZone) dy = 0;
 
       if (dx !== 0 || dy !== 0) {
-        const mouseSensitivity = 0.0022; // Moderate, smooth sensitivity for precision aiming
+        const mouseSensitivity = 0.0022; // Natural, smooth sensitivity for precision aiming
+        // Move mouse RIGHT -> camera yaw turns RIGHT
+        // Move mouse LEFT -> camera yaw turns LEFT
         eng.cameraYaw += dx * mouseSensitivity;
-        eng.cameraPitch = Math.max(-0.25, Math.min(0.72, eng.cameraPitch + dy * mouseSensitivity));
+        // Move mouse UP (dy < 0) -> camera pitch tilts UP
+        // Move mouse DOWN (dy > 0) -> camera pitch tilts DOWN
+        eng.cameraPitch = Math.max(-0.65, Math.min(0.65, eng.cameraPitch - dy * mouseSensitivity));
       }
     };
 
@@ -695,7 +716,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [gameMode, startReload, fireWeapon]);
+  }, [gameMode, startReload, fireWeapon, triggerJump]);
 
   // Click canvas to engage pointer lock for desktop mouse aiming
   const handleCanvasClick = useCallback(() => {
@@ -818,9 +839,13 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         // Dead-zone check to prevent accidental micro tremors
         if (Math.hypot(dx, dy) < 1.0) return;
 
-        const touchSensitivity = 0.0038; // Smooth, responsive, accurate
+        const touchSensitivity = 0.0042; // Smooth, responsive, accurate
+        // Touch swipe RIGHT (dx > 0) -> camera turns RIGHT
+        // Touch swipe LEFT (dx < 0) -> camera turns LEFT
         eng.cameraYaw += dx * touchSensitivity;
-        eng.cameraPitch = Math.max(-0.25, Math.min(0.72, eng.cameraPitch + dy * touchSensitivity));
+        // Touch swipe UP (dy < 0) -> camera tilts UP
+        // Touch swipe DOWN (dy > 0) -> camera tilts DOWN
+        eng.cameraPitch = Math.max(-0.65, Math.min(0.65, eng.cameraPitch - dy * touchSensitivity));
         break;
       }
     }
@@ -952,6 +977,17 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           }
         }
 
+        // Jumping physics
+        if (eng.isJumping) {
+          eng.playerPos.y += eng.jumpVelocityY * delta;
+          eng.jumpVelocityY -= 19.6 * delta; // Crisp responsive gravity
+          if (eng.playerPos.y <= 0) {
+            eng.playerPos.y = 0;
+            eng.isJumping = false;
+            eng.jumpVelocityY = 0;
+          }
+        }
+
         // Player model smoothly faces the camera yaw (aim direction)
         let diff = eng.cameraYaw - eng.playerRotY;
         while (diff < -Math.PI) diff += Math.PI * 2;
@@ -975,29 +1011,33 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         // -------------------------------------------------------
         // The camera NEVER rotates automatically.
         // It stays strictly fixed at user-controlled cameraYaw and cameraPitch.
-        // As the player moves, the camera translates synchronously with the player without any angle drift or spin.
+        // As the player moves, the camera translates smoothly with the player without any angle drift or spin.
         const cosPitch = Math.cos(eng.cameraPitch);
         const sinPitch = Math.sin(eng.cameraPitch);
 
-        const offsetX = -Math.sin(eng.cameraYaw) * eng.cameraDistance * cosPitch;
-        const offsetY = eng.cameraHeight + sinPitch * eng.cameraDistance;
-        const offsetZ = -Math.cos(eng.cameraYaw) * eng.cameraDistance * cosPitch;
+        const forwardX = Math.sin(eng.cameraYaw);
+        const forwardZ = Math.cos(eng.cameraYaw);
+        const rightX = Math.cos(eng.cameraYaw);
+        const rightZ = -Math.sin(eng.cameraYaw);
 
-        const targetCamPos = new THREE.Vector3(
-          eng.playerPos.x + offsetX,
-          eng.playerPos.y + offsetY,
-          eng.playerPos.z + offsetZ
-        );
+        // Direction the camera is looking
+        const lookDirX = forwardX * cosPitch;
+        const lookDirY = sinPitch;
+        const lookDirZ = forwardZ * cosPitch;
 
-        const targetLookAt = new THREE.Vector3(
-          eng.playerPos.x,
-          eng.playerPos.y + 1.45,
-          eng.playerPos.z
-        );
+        // Shoulder anchor: slightly offset over the right shoulder so crosshair has clear view
+        const shoulderOffset = 0.45;
+        const anchorX = eng.playerPos.x + rightX * shoulderOffset;
+        const anchorY = eng.playerPos.y + 1.65;
+        const anchorZ = eng.playerPos.z + rightZ * shoulderOffset;
 
-        // Direct synchronous tracking: completely eliminates lag-induced wobble or rotation while running
-        eng.camera.position.copy(targetCamPos);
-        eng.camera.lookAt(targetLookAt);
+        // Position camera behind anchor along reverse look direction
+        const targetCamX = anchorX - lookDirX * eng.cameraDistance;
+        const targetCamY = Math.max(0.4, anchorY - lookDirY * eng.cameraDistance);
+        const targetCamZ = anchorZ - lookDirZ * eng.cameraDistance;
+
+        eng.camera.position.set(targetCamX, targetCamY, targetCamZ);
+        eng.camera.lookAt(targetCamX + lookDirX * 50, targetCamY + lookDirY * 50, targetCamZ + lookDirZ * 50);
 
         // -------------------------------------------------------
         // 5. WAVE SPAWNING & DIFFICULTY PROGRESSION
@@ -1046,25 +1086,28 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         }
 
         // -------------------------------------------------------
-        // 6. ZOMBIE AI (PATHING, ATTACKING, SEPARATION)
+        // 6. ZOMBIE AI (OPTIMIZED PATHING, ATTACKING, RECYCLING)
         // -------------------------------------------------------
-        eng.zombies.forEach(z => {
+        for (let i = eng.zombies.length - 1; i >= 0; i--) {
+          const z = eng.zombies[i];
           if (z.isDead) {
             z.deathTimer += delta;
             z.meshData.updateAnimation(delta, false, false, true);
-            if (z.deathTimer > 3.0) {
-              // Fade and remove
-              eng.scene?.remove(z.meshData.group);
+            if (z.deathTimer > 2.5) {
+              // Recycle and remove from scene and memory
+              if (eng.scene) eng.scene.remove(z.meshData.group);
+              eng.zombies.splice(i, 1);
             }
-            return;
+            continue;
           }
 
           const zPos = z.meshData.group.position;
-          const distToPlayer = zPos.distanceTo(eng.playerPos);
+          const distToPlayer = Math.hypot(zPos.x - eng.playerPos.x, zPos.z - eng.playerPos.z);
 
           // Rotate to face player
-          const toPlayer = eng.playerPos.clone().sub(zPos);
-          const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
+          const dx = eng.playerPos.x - zPos.x;
+          const dz = eng.playerPos.z - zPos.z;
+          const targetAngle = Math.atan2(dx, dz);
           z.meshData.group.rotation.y = THREE.MathUtils.lerp(
             z.meshData.group.rotation.y,
             targetAngle,
@@ -1097,29 +1140,31 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             }
           } else {
             // Move toward player
-            const forward = new THREE.Vector3(
-              Math.sin(z.meshData.group.rotation.y),
-              0,
-              Math.cos(z.meshData.group.rotation.y)
-            ).normalize();
+            const forwardX = Math.sin(z.meshData.group.rotation.y);
+            const forwardZ = Math.cos(z.meshData.group.rotation.y);
 
-            // Simple separation from other zombies
-            const sepForce = new THREE.Vector3();
-            for (const other of eng.zombies) {
+            // Simple separation from nearby zombies
+            let sepX = 0;
+            let sepZ = 0;
+            for (let j = 0; j < eng.zombies.length; j++) {
+              const other = eng.zombies[j];
               if (other.id === z.id || other.isDead) continue;
-              const d = zPos.distanceTo(other.meshData.group.position);
+              const ox = zPos.x - other.meshData.group.position.x;
+              const oz = zPos.z - other.meshData.group.position.z;
+              const d = Math.hypot(ox, oz);
               if (d < 1.2 && d > 0.01) {
-                const away = zPos.clone().sub(other.meshData.group.position).normalize().multiplyScalar((1.2 - d) * 1.5);
-                sepForce.add(away);
+                const push = (1.2 - d) / d;
+                sepX += ox * push;
+                sepZ += oz * push;
               }
             }
 
-            const step = forward.multiplyScalar(z.speed * delta).add(sepForce.multiplyScalar(delta));
-            zPos.add(step);
+            zPos.x += (forwardX * z.speed + sepX * 1.5) * delta;
+            zPos.z += (forwardZ * z.speed + sepZ * 1.5) * delta;
           }
 
           z.meshData.updateAnimation(delta, !isAttacking, isAttacking, false);
-        });
+        }
 
         // -------------------------------------------------------
         // 7. PARTICLES & BULLETS UPDATE
@@ -1366,21 +1411,37 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             />
           </div>
 
-          {/* Action Buttons: RELOAD & BIG FIRE BUTTON */}
+          {/* Action Buttons: JUMP, RELOAD & BIG FIRE BUTTON */}
           <div className="zombie-escape__mobile-actions">
-            <button
-              type="button"
-              className="zombie-escape__mobile-reload-btn"
-              onTouchStart={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                startReload();
-              }}
-              onClick={startReload}
-            >
-              <RotateCcw className={`w-4 h-4 ${isReloading ? 'animate-spin' : ''}`} />
-              <span>{isReloading ? `${reloadProgress}%` : 'RELOAD'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="zombie-escape__mobile-jump-btn"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  triggerJump();
+                }}
+                onClick={triggerJump}
+              >
+                <ArrowUp className="w-4 h-4 text-emerald-400" />
+                <span>JUMP</span>
+              </button>
+
+              <button
+                type="button"
+                className="zombie-escape__mobile-reload-btn"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  startReload();
+                }}
+                onClick={startReload}
+              >
+                <RotateCcw className={`w-4 h-4 ${isReloading ? 'animate-spin' : ''}`} />
+                <span>{isReloading ? `${reloadProgress}%` : 'RELOAD'}</span>
+              </button>
+            </div>
 
             <button
               type="button"
@@ -1475,12 +1536,16 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
                 <span className="zombie-escape__guide-desc">Move Survivor</span>
               </div>
               <div className="zombie-escape__guide-row">
-                <span className="zombie-escape__guide-key">Mouse Aim</span>
-                <span className="zombie-escape__guide-desc">Rotate & Target</span>
+                <span className="zombie-escape__guide-key">Mouse</span>
+                <span className="zombie-escape__guide-desc">Aim & Turn (Manual)</span>
               </div>
               <div className="zombie-escape__guide-row">
-                <span className="zombie-escape__guide-key">Left Click / Space</span>
+                <span className="zombie-escape__guide-key">Left Click</span>
                 <span className="zombie-escape__guide-desc">Fire Assault Rifle</span>
+              </div>
+              <div className="zombie-escape__guide-row">
+                <span className="zombie-escape__guide-key">Space</span>
+                <span className="zombie-escape__guide-desc">Jump Obstacles</span>
               </div>
               <div className="zombie-escape__guide-row">
                 <span className="zombie-escape__guide-key">R</span>
@@ -1496,12 +1561,20 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             <div className="zombie-escape__guide-section">
               <div className="zombie-escape__guide-heading">MOBILE CONTROLS</div>
               <div className="zombie-escape__guide-row">
-                <span className="zombie-escape__guide-key">Left Thumbstick</span>
-                <span className="zombie-escape__guide-desc">360° Analog Walk</span>
+                <span className="zombie-escape__guide-key">Left Joystick</span>
+                <span className="zombie-escape__guide-desc">Move Survivor</span>
+              </div>
+              <div className="zombie-escape__guide-row">
+                <span className="zombie-escape__guide-key">Right Screen Swipe</span>
+                <span className="zombie-escape__guide-desc">Aim & Look Around</span>
               </div>
               <div className="zombie-escape__guide-row">
                 <span className="zombie-escape__guide-key">FIRE Button</span>
-                <span className="zombie-escape__guide-desc">Shoot & Target Threat</span>
+                <span className="zombie-escape__guide-desc">Shoot Assault Rifle</span>
+              </div>
+              <div className="zombie-escape__guide-row">
+                <span className="zombie-escape__guide-key">JUMP Button</span>
+                <span className="zombie-escape__guide-desc">Jump Over Obstacles</span>
               </div>
               <div className="zombie-escape__guide-row">
                 <span className="zombie-escape__guide-key">RELOAD Button</span>

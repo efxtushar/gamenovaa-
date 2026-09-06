@@ -174,6 +174,8 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
     }
   };
 
+  const isFullBleedGame = game.slug === 'neon-drift' || game.slug === 'mecha-battle' || game.slug === 'cyber-samurai' || game.slug === 'galaxy-commander' || game.slug === 'desert-racer';
+
   return (
     <div
       ref={containerRef}
@@ -185,78 +187,80 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
       }}
       className="fixed inset-0 z-50 bg-[#05070d] text-white flex flex-col w-full min-h-[100dvh] max-h-[100dvh] h-[100dvh] overflow-hidden select-none outline-none"
     >
-      {/* MINIMAL IN-GAME ACTION BAR: Back • Pause • Sound • Fullscreen */}
-      <header className="h-11 sm:h-12 bg-slate-900 border-b border-slate-800 px-2 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-40">
-        {/* Left: Back */}
-        <button
-          onClick={handleExitGame}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
-          title="Back to games (Esc)"
-        >
-          <ArrowLeft className="w-4 h-4 shrink-0" />
-          <span className="hidden sm:inline">Back to Games</span>
-          <span className="sm:hidden text-[11px]">Exit</span>
-        </button>
-
-        {/* Center: Game Title */}
-        <span className="text-xs font-bold text-slate-300 truncate max-w-[140px] sm:max-w-xs md:max-w-md text-center">
-          {game.title}
-        </span>
-
-        {/* Right: Touch Controls • Pause • Sound • Fullscreen */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Virtual Touch Controls Toggle */}
+      {/* MINIMAL IN-GAME ACTION BAR: Back • Pause • Sound • Fullscreen (Hidden for full-bleed games like Neon Drift which have built-in HUD) */}
+      {!isFullBleedGame && (
+        <header className="h-11 sm:h-12 bg-slate-900 border-b border-slate-800 px-2 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-40">
+          {/* Left: Back */}
           <button
-            onClick={() => setShowMobileControls(prev => !prev)}
-            title="Toggle Virtual Touch Controls"
-            aria-label="Toggle Virtual Touch Controls"
-            className={`p-1.5 px-2 sm:px-2.5 rounded-lg border flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${
-              showMobileControls
-                ? 'bg-[#6D28D9] text-white border-[#6D28D9]'
-                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
-            }`}
+            onClick={handleExitGame}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
+            title="Back to games (Esc)"
           >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span className="hidden md:inline text-[11px]">Controls</span>
+            <ArrowLeft className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Back to Games</span>
+            <span className="sm:hidden text-[11px]">Exit</span>
           </button>
 
-          {/* Pause / Resume */}
-          <button
-            onClick={() => setShowPauseModal(prev => !prev)}
-            title="Pause Game (P)"
-            className={`p-1.5 px-2 sm:px-2.5 rounded-lg border flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${
-              showPauseModal
-                ? 'bg-[#6D28D9] text-white border-[#6D28D9]'
-                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 hover:text-white'
-            }`}
-          >
-            {showPauseModal ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{showPauseModal ? 'Resume' : 'Pause'}</span>
-          </button>
+          {/* Center: Game Title */}
+          <span className="text-xs font-bold text-slate-300 truncate max-w-[140px] sm:max-w-xs md:max-w-md text-center">
+            {game.title}
+          </span>
 
-          {/* Sound Toggle */}
-          <button
-            onClick={toggleSound}
-            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            className="p-1.5 px-2 sm:px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
-          >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-purple-400" />}
-            <span className="hidden lg:inline">{isMuted ? 'Muted' : 'Sound'}</span>
-          </button>
+          {/* Right: Touch Controls • Pause • Sound • Fullscreen */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Virtual Touch Controls Toggle */}
+            <button
+              onClick={() => setShowMobileControls(prev => !prev)}
+              title="Toggle Virtual Touch Controls"
+              aria-label="Toggle Virtual Touch Controls"
+              className={`p-1.5 px-2 sm:px-2.5 rounded-lg border flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${
+                showMobileControls
+                  ? 'bg-[#6D28D9] text-white border-[#6D28D9]'
+                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[11px]">Controls</span>
+            </button>
 
-          {/* Fullscreen Toggle */}
-          <button
-            onClick={toggleFullscreen}
-            title="Fullscreen (F)"
-            aria-label="Toggle Fullscreen"
-            className="p-1.5 px-2 sm:px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
-          >
-            {isBrowserFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="hidden lg:inline">Fullscreen</span>
-          </button>
-        </div>
-      </header>
+            {/* Pause / Resume */}
+            <button
+              onClick={() => setShowPauseModal(prev => !prev)}
+              title="Pause Game (P)"
+              className={`p-1.5 px-2 sm:px-2.5 rounded-lg border flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${
+                showPauseModal
+                  ? 'bg-[#6D28D9] text-white border-[#6D28D9]'
+                  : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 hover:text-white'
+              }`}
+            >
+              {showPauseModal ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{showPauseModal ? 'Resume' : 'Pause'}</span>
+            </button>
+
+            {/* Sound Toggle */}
+            <button
+              onClick={toggleSound}
+              title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+              aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+              className="p-1.5 px-2 sm:px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-purple-400" />}
+              <span className="hidden lg:inline">{isMuted ? 'Muted' : 'Sound'}</span>
+            </button>
+
+            {/* Fullscreen Toggle */}
+            <button
+              onClick={toggleFullscreen}
+              title="Fullscreen (F)"
+              aria-label="Toggle Fullscreen"
+              className="p-1.5 px-2 sm:px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
+            >
+              {isBrowserFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span className="hidden lg:inline">Fullscreen</span>
+            </button>
+          </div>
+        </header>
+      )}
 
       {/* FULL VIEWPORT IMMERSIVE GAME CANVAS STAGE */}
       <main className="flex-1 relative flex flex-col items-center justify-center bg-[#05070d] overflow-hidden w-full min-h-0">
@@ -271,8 +275,8 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
           </Suspense>
         </div>
 
-        {/* VIRTUAL TOUCH CONTROLS (Mobile floating overlay) */}
-        {showMobileControls && (
+        {/* VIRTUAL TOUCH CONTROLS (Mobile floating overlay, only for games without built-in controls) */}
+        {showMobileControls && !isFullBleedGame && game.slug !== 'zombie-escape' && (
           <div className="absolute inset-x-0 bottom-0 pointer-events-none z-30">
             <MobileControls gameSlug={game.slug} />
           </div>

@@ -449,6 +449,30 @@
   background: rgba(139, 92, 246, 0.3);
 }
 
+.zombie-escape__mobile-jump-btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(15, 20, 36, 0.88);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.zombie-escape__mobile-jump-btn:active {
+  transform: scale(0.92);
+  background: rgba(16, 185, 129, 0.3);
+}
+
 /* -------------------------------------------------------------
    MENUS & MODALS (START, HOW TO PLAY, SETTINGS, GAMEOVER)
    ------------------------------------------------------------- */

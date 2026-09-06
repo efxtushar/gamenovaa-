@@ -262,6 +262,32 @@ class ZombieAudioEngine {
     } catch {}
   }
 
+  // Player Jump Whoosh
+  public playJump() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.12);
+
+      gain.gain.setValueAtTime(0.18 * this.volume, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {}
+  }
+
   // Wave Clear Sound
   public playWaveClear() {
     if (this.isMuted) return;

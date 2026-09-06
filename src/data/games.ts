@@ -308,15 +308,16 @@ export const INITIAL_GAMES: GameItem[] = [
     rating: 4.7,
     ratingCount: 1330,
     plays: 74500,
-    description: 'Dune buggy physics madness across rolling sand dunes. Catch insane air over canyon jumps, perform mid-air backflips, and beat the desert clock.',
-    instructions: 'Balance your buggy throttle and mid-air rotation. Land flat on dune slopes to maintain maximum speed boost and avoid rollovers.',
+    description: 'High-speed 3D arcade desert racing! Pilot futuristic off-road supercars across sun-scorched dunes and rocky canyons, drift around tight hairpins, pass checkpoints, and overtake rival AI racers to claim the podium.',
+    instructions: 'Accelerate through wide desert circuits, drift around corners to build high-score combos, pass checkpoint arches to extend your timer (+15s), and complete all 3 laps before time runs out.',
     controls: [
-      { key: '↑ / W', action: 'Gas / Accelerate' },
-      { key: '↓ / S', action: 'Brake / Reverse' },
-      { key: '← / → or A / D', action: 'Tilt / Balance Vehicle' },
-      { key: 'Spacebar', action: 'Nitro Surge' }
+      { key: 'W / ↑', action: 'Accelerate / Gas' },
+      { key: 'S / ↓', action: 'Brake / Reverse' },
+      { key: 'A / D or ← / →', action: 'Steer Left / Right' },
+      { key: 'Spacebar', action: 'Handbrake / Drift' },
+      { key: 'Esc / P', action: 'Pause Game' }
     ],
-    tags: ['Offroad', 'Physics', 'Racing', 'Buggy', 'Stunts'],
+    tags: ['Racing', 'Arcade', 'Offroad', '3D Track', 'Drifting', 'Speed'],
     themeColor: '#eab308',
     accentColor: '#f97316',
     thumbnailUrl: desertRacerCover,

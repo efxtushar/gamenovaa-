@@ -327,7 +327,7 @@ export function buildAbandonedCity(): CityBuildResult {
       cityGroup.add(head);
 
       // SpotLight casting warm sodium cone onto asphalt (brighter for high visibility)
-      const spotLight = new THREE.SpotLight(0xffdf99, 52, 34, Math.PI / 3.2, 0.55, 1.0);
+      const spotLight = new THREE.SpotLight(0xffedd5, 75, 42, Math.PI / 3.0, 0.6, 1.0);
       spotLight.position.set(poleX - side * 2.0, poleHeight - 0.5, z);
       spotLight.target.position.set(poleX - side * 2.0, 0, z);
       spotLight.castShadow = false;
@@ -335,7 +335,7 @@ export function buildAbandonedCity(): CityBuildResult {
       cityGroup.add(spotLight.target);
 
       // PointLight providing omnidirectional street illumination for walking zombies & environment
-      const streetPointLight = new THREE.PointLight(0xffb74d, 4.2, 26);
+      const streetPointLight = new THREE.PointLight(0xfdba74, 6.2, 32);
       streetPointLight.position.set(poleX - side * 2.0, poleHeight - 0.8, z);
       cityGroup.add(streetPointLight);
 

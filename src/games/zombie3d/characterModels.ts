@@ -145,9 +145,9 @@ export function createPlayerMesh(): Player3DResult {
   gunGroup.add(mag);
 
   // Tactical Flashlight attached to gun barrel (Casts bright, wide beam into foggy streets)
-  const flashlight = new THREE.SpotLight(0xf8fafc, 90, 60, Math.PI / 4.0, 0.45, 1.1);
+  const flashlight = new THREE.SpotLight(0xf8fafc, 120, 75, Math.PI / 3.4, 0.5, 1.0);
   flashlight.position.set(0, 0, 0.65);
-  flashlight.target.position.set(0, 0, 12);
+  flashlight.target.position.set(0, 0, 15);
   gunGroup.add(flashlight);
   gunGroup.add(flashlight.target);
 
@@ -253,8 +253,8 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
       attackInterval: 1.0,
       scoreValue: 100,
       scale: 1.0,
-      color: 0x8aa880, // sickly pale undead green - clearly visible against dark pavement
-      clothesColor: 0x475569
+      color: 0x9cb892, // clearly visible pale undead tone
+      clothesColor: 0x64748b
     },
     runner: {
       type: 'runner',
@@ -266,8 +266,8 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
       attackInterval: 0.75,
       scoreValue: 150,
       scale: 0.95,
-      color: 0x78926e,
-      clothesColor: 0x8b5cf6 // ragged purple hoodie with strong contrast
+      color: 0xb58276, // pale crimson skin
+      clothesColor: 0xc084fc // vibrant purple hoodie with strong contrast
     },
     brute: {
       type: 'brute',
@@ -279,8 +279,8 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
       attackInterval: 1.4,
       scoreValue: 350,
       scale: 1.32,
-      color: 0x6a8260,
-      clothesColor: 0x334155
+      color: 0x829c78,
+      clothesColor: 0x475569
     }
   };
 
