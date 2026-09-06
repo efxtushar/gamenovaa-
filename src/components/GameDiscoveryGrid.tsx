@@ -21,7 +21,7 @@ export const GameDiscoveryGrid: React.FC<GameDiscoveryGridProps> = ({
 
   if (layout === 'standard') {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
         {games.map(game => (
           <GameCard
             key={game.id}
@@ -47,7 +47,7 @@ export const GameDiscoveryGrid: React.FC<GameDiscoveryGridProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 auto-rows-[minmax(180px,auto)] grid-flow-dense">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4 lg:gap-5 auto-rows-[minmax(160px,auto)] sm:auto-rows-[minmax(180px,auto)] grid-flow-dense">
       {games.map((game, index) => {
         const size = getCardSize(index, games.length);
         return (

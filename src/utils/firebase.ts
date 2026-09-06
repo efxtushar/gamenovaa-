@@ -12,6 +12,7 @@ import {
   User
 } from 'firebase/auth';
 import { 
+  initializeFirestore,
   getFirestore, 
   doc, 
   getDoc, 
@@ -26,14 +27,46 @@ import {
   orderBy, 
   limit, 
   serverTimestamp,
-  getDocFromServer
+  getDocFromServer,
+  setLogLevel,
+  Firestore
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Use long-polling transport to ensure resilient connectivity across proxies, VPNs, and sandboxed iframes
+let firestoreDb: Firestore;
+try {
+  firestoreDb = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  }, firebaseConfig.firestoreDatabaseId);
+} catch {
+  firestoreDb = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+
+// Suppress benign internal network reconnection noise
+try {
+  setLogLevel('silent');
+} catch {
+  // Safe ignore
+}
+
+export const db = firestoreDb;
 export const googleProvider = new GoogleAuthProvider();
+
+// Boot verification test per Firebase skill
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("Firestore running in offline mode.");
+    }
+  }
+}
+testConnection();
 
 export enum OperationType {
   CREATE = 'create',
@@ -61,7 +94,7 @@ export interface FirestoreErrorInfo {
   };
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -78,8 +111,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.warn('Firestore Error Handled: ', JSON.stringify(errInfo));
-  return errInfo;
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export { 
@@ -91,6 +124,8 @@ export {
   sendPasswordResetEmail,
   updateProfile,
   onAuthStateChanged,
+  initializeFirestore,
+  getFirestore,
   doc,
   getDoc,
   setDoc,
@@ -104,7 +139,8 @@ export {
   orderBy,
   limit,
   serverTimestamp,
-  getDocFromServer
+  getDocFromServer,
+  setLogLevel
 };
 export type { User };
 

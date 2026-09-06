@@ -1,188 +1,115 @@
-import React, { useCallback } from 'react';
-import { sound } from '../utils/soundEffects';
+import React, { useMemo, useState, useEffect } from 'react';
+import { GAME_CONTROLS_CONFIG, DEFAULT_GAME_CONTROL_LAYOUT } from './mobile-controls/GameControlsConfig';
+import { VirtualJoystick } from './mobile-controls/VirtualJoystick';
+import { TouchButton } from './mobile-controls/TouchButton';
+import { TouchButtonConfig } from './mobile-controls/types';
+import { Sparkles } from 'lucide-react';
 
 interface MobileControlsProps {
-  onAction?: (actionName: string, active: boolean) => void;
   gameSlug?: string;
+  className?: string;
 }
 
-export const MobileControls: React.FC<MobileControlsProps> = ({ onAction }) => {
-  const dispatchKey = useCallback((type: 'keydown' | 'keyup', key: string, code: string) => {
-    try {
-      const event = new KeyboardEvent(type, {
-        key,
-        code,
-        bubbles: true,
-        cancelable: true,
-      });
-      window.dispatchEvent(event);
-    } catch {
-      // Fallback
-    }
-  }, []);
+export const MobileControls: React.FC<MobileControlsProps> = ({
+  gameSlug = '',
+  className = '',
+}) => {
+  const [showHint, setShowHint] = useState(true);
 
-  const handlePress = (action: string) => {
-    sound.playClick();
-    if (onAction) onAction(action, true);
+  // Look up tailored control scheme for the game
+  const layout = useMemo(() => {
+    return GAME_CONTROLS_CONFIG[gameSlug] || DEFAULT_GAME_CONTROL_LAYOUT;
+  }, [gameSlug]);
 
-    switch (action) {
-      case 'up':
-        dispatchKey('keydown', 'ArrowUp', 'ArrowUp');
-        dispatchKey('keydown', 'w', 'KeyW');
-        break;
-      case 'down':
-        dispatchKey('keydown', 'ArrowDown', 'ArrowDown');
-        dispatchKey('keydown', 's', 'KeyS');
-        break;
-      case 'left':
-        dispatchKey('keydown', 'ArrowLeft', 'ArrowLeft');
-        dispatchKey('keydown', 'a', 'KeyA');
-        break;
-      case 'right':
-        dispatchKey('keydown', 'ArrowRight', 'ArrowRight');
-        dispatchKey('keydown', 'd', 'KeyD');
-        break;
-      case 'actionA':
-        dispatchKey('keydown', ' ', 'Space');
-        dispatchKey('keydown', 'z', 'KeyZ');
-        dispatchKey('keydown', 'j', 'KeyJ');
-        dispatchKey('keydown', 'f', 'KeyF');
-        dispatchKey('keydown', 'Enter', 'Enter');
-        break;
-      case 'actionB':
-        dispatchKey('keydown', 'x', 'KeyX');
-        dispatchKey('keydown', 'c', 'KeyC');
-        dispatchKey('keydown', 'k', 'KeyK');
-        dispatchKey('keydown', 'e', 'KeyE');
-        dispatchKey('keydown', 'Shift', 'ShiftLeft');
-        break;
-    }
-  };
+  // Auto fade hint after 6 seconds
+  useEffect(() => {
+    setShowHint(true);
+    const timer = setTimeout(() => {
+      setShowHint(false);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [gameSlug]);
 
-  const handleRelease = (action: string) => {
-    if (onAction) onAction(action, false);
-
-    switch (action) {
-      case 'up':
-        dispatchKey('keyup', 'ArrowUp', 'ArrowUp');
-        dispatchKey('keyup', 'w', 'KeyW');
-        break;
-      case 'down':
-        dispatchKey('keyup', 'ArrowDown', 'ArrowDown');
-        dispatchKey('keyup', 's', 'KeyS');
-        break;
-      case 'left':
-        dispatchKey('keyup', 'ArrowLeft', 'ArrowLeft');
-        dispatchKey('keyup', 'a', 'KeyA');
-        break;
-      case 'right':
-        dispatchKey('keyup', 'ArrowRight', 'ArrowRight');
-        dispatchKey('keyup', 'd', 'KeyD');
-        break;
-      case 'actionA':
-        dispatchKey('keyup', ' ', 'Space');
-        dispatchKey('keyup', 'z', 'KeyZ');
-        dispatchKey('keyup', 'j', 'KeyJ');
-        dispatchKey('keyup', 'f', 'KeyF');
-        dispatchKey('keyup', 'Enter', 'Enter');
-        break;
-      case 'actionB':
-        dispatchKey('keyup', 'x', 'KeyX');
-        dispatchKey('keyup', 'c', 'KeyC');
-        dispatchKey('keyup', 'k', 'KeyK');
-        dispatchKey('keyup', 'e', 'KeyE');
-        dispatchKey('keyup', 'Shift', 'ShiftLeft');
-        break;
-    }
-  };
+  const hasLeftControls = layout.leftCluster !== 'none';
+  const hasRightControls = layout.rightButtons && layout.rightButtons.length > 0;
+  const hasQuickActions = layout.quickActions && layout.quickActions.length > 0;
 
   return (
-    <div className="w-full select-none py-3 px-4 sm:px-8 bg-[#090714] border-t border-white/10 flex items-center justify-between gap-4 max-w-4xl mx-auto touch-none">
-      {/* Left: Virtual D-Pad */}
-      <div className="relative w-32 h-32 sm:w-36 sm:h-36 flex items-center justify-center">
-        {/* D-pad cross background */}
-        <div className="absolute w-10 sm:w-12 h-32 sm:h-36 bg-[#131024] rounded-2xl border border-white/10" />
-        <div className="absolute w-32 sm:w-36 h-10 sm:h-12 bg-[#131024] rounded-2xl border border-white/10" />
+    <div
+      className={`
+        pointer-events-none select-none touch-none
+        w-full flex flex-col justify-end
+        px-3 sm:px-6 pb-3 sm:pb-5
+        ${className}
+      `}
+      aria-label="Mobile Game Controls"
+    >
+      {/* 1. Direct Touch Hint badge (for touch-canvas games like Gem Match, Street Hoops, etc.) */}
+      {layout.touchCanvasHint && showHint && (
+        <div className="w-full flex justify-center mb-2 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setShowHint(false)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/80 border border-cyan-500/30 text-cyan-300 text-[11px] font-mono tracking-wide backdrop-blur-md shadow-lg active:scale-95 transition-all"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span>{layout.touchCanvasHint}</span>
+          </button>
+        </div>
+      )}
 
-        {/* Up */}
-        <button
-          onTouchStart={(e) => { e.preventDefault(); handlePress('up'); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleRelease('up'); }}
-          onMouseDown={() => handlePress('up')}
-          onMouseUp={() => handleRelease('up')}
-          className="absolute top-0 w-10 sm:w-12 h-10 sm:h-12 rounded-t-xl bg-[#1c1836] active:bg-cyan-500 text-cyan-300 active:text-black font-bold flex items-center justify-center transition-colors shadow select-none cursor-pointer"
-          aria-label="Up / Accelerate"
-        >
-          ▲
-        </button>
+      {/* 2. Floating Quick Actions (Weapon Switch, Reload, Spells 1/2/3) */}
+      {hasQuickActions && (
+        <div className="w-full flex justify-end mb-2 pr-1 pointer-events-auto">
+          <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-950/50 backdrop-blur-md border border-white/10 shadow-lg">
+            {layout.quickActions?.map((btnConfig: TouchButtonConfig) => (
+              <TouchButton key={btnConfig.id} config={btnConfig} />
+            ))}
+          </div>
+        </div>
+      )}
 
-        {/* Down */}
-        <button
-          onTouchStart={(e) => { e.preventDefault(); handlePress('down'); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleRelease('down'); }}
-          onMouseDown={() => handlePress('down')}
-          onMouseUp={() => handleRelease('down')}
-          className="absolute bottom-0 w-10 sm:w-12 h-10 sm:h-12 rounded-b-xl bg-[#1c1836] active:bg-cyan-500 text-cyan-300 active:text-black font-bold flex items-center justify-center transition-colors shadow select-none cursor-pointer"
-          aria-label="Down / Brake"
-        >
-          ▼
-        </button>
+      {/* 3. Main Bottom Edge Controls (Left Cluster + Right Cluster) */}
+      <div className="w-full flex items-end justify-between gap-3">
+        {/* LEFT CLUSTER: Joystick, Steer L/R, or Custom buttons */}
+        <div className="pointer-events-auto flex items-end">
+          {layout.leftCluster === 'joystick' && (
+            <div className="p-1 sm:p-2 rounded-full bg-slate-950/35 backdrop-blur-sm">
+              <VirtualJoystick size={106} />
+            </div>
+          )}
 
-        {/* Left */}
-        <button
-          onTouchStart={(e) => { e.preventDefault(); handlePress('left'); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleRelease('left'); }}
-          onMouseDown={() => handlePress('left')}
-          onMouseUp={() => handleRelease('left')}
-          className="absolute left-0 w-10 sm:w-12 h-10 sm:h-12 rounded-l-xl bg-[#1c1836] active:bg-cyan-500 text-cyan-300 active:text-black font-bold flex items-center justify-center transition-colors shadow select-none cursor-pointer"
-          aria-label="Left / Steer Left"
-        >
-          ◀
-        </button>
+          {layout.leftCluster === 'steer-lr' && layout.customLeftButtons && (
+            <div className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-2xl bg-slate-950/40 backdrop-blur-sm border border-white/10 shadow-xl">
+              {layout.customLeftButtons.map((btnConfig: TouchButtonConfig) => (
+                <TouchButton key={btnConfig.id} config={btnConfig} />
+              ))}
+            </div>
+          )}
 
-        {/* Right */}
-        <button
-          onTouchStart={(e) => { e.preventDefault(); handlePress('right'); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleRelease('right'); }}
-          onMouseDown={() => handlePress('right')}
-          onMouseUp={() => handleRelease('right')}
-          className="absolute right-0 w-10 sm:w-12 h-10 sm:h-12 rounded-r-xl bg-[#1c1836] active:bg-cyan-500 text-cyan-300 active:text-black font-bold flex items-center justify-center transition-colors shadow select-none cursor-pointer"
-          aria-label="Right / Steer Right"
-        >
-          ▶
-        </button>
+          {layout.leftCluster === 'buttons' && layout.customLeftButtons && (
+            <div className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-2xl bg-slate-950/40 backdrop-blur-sm border border-white/10 shadow-xl">
+              {layout.customLeftButtons.map((btnConfig: TouchButtonConfig) => (
+                <TouchButton key={btnConfig.id} config={btnConfig} />
+              ))}
+            </div>
+          )}
 
-        {/* Center Pivot */}
-        <div className="relative w-8 h-8 rounded-full bg-[#090714] border border-cyan-500/40 z-10 pointer-events-none" />
-      </div>
+          {!hasLeftControls && (
+            <div className="w-4" /> // spacing placeholder
+          )}
+        </div>
 
-      {/* Right: Action Buttons (B: Special/Attack, A: Primary Action/Jump/Shoot) */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        {/* Action Button B */}
-        <button
-          onTouchStart={(e) => { e.preventDefault(); handlePress('actionB'); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleRelease('actionB'); }}
-          onMouseDown={() => handlePress('actionB')}
-          onMouseUp={() => handleRelease('actionB')}
-          className="w-13 h-13 sm:w-15 sm:h-15 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 active:from-rose-400 active:to-pink-500 text-white font-orbitron font-black text-sm flex flex-col items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.4)] active:scale-95 transition-transform cursor-pointer"
-          aria-label="Action B"
-        >
-          <span>B</span>
-          <span className="text-[8px] font-mono opacity-90">ALT / X</span>
-        </button>
-
-        {/* Action Button A */}
-        <button
-          onTouchStart={(e) => { e.preventDefault(); handlePress('actionA'); }}
-          onTouchEnd={(e) => { e.preventDefault(); handleRelease('actionA'); }}
-          onMouseDown={() => handlePress('actionA')}
-          onMouseUp={() => handleRelease('actionA')}
-          className="w-15 h-15 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 active:from-cyan-300 active:to-blue-500 text-black active:text-white font-orbitron font-black text-base flex flex-col items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.5)] active:scale-95 transition-transform cursor-pointer"
-          aria-label="Action A"
-        >
-          <span>A</span>
-          <span className="text-[9px] font-mono font-bold opacity-90">SPACE</span>
-        </button>
+        {/* RIGHT CLUSTER: Action buttons (Jump, Attack, Shoot, Brake, Boost, etc.) */}
+        <div className="pointer-events-auto flex items-end justify-end">
+          {hasRightControls && (
+            <div className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-2xl bg-slate-950/40 backdrop-blur-sm border border-white/10 shadow-xl">
+              {layout.rightButtons.map((btnConfig: TouchButtonConfig) => (
+                <TouchButton key={btnConfig.id} config={btnConfig} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

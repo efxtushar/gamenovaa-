@@ -1,29 +1,13 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { 
-  auth, 
   db, 
-  googleProvider,
-  signInWithPopup,
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut as fbSignOut, 
-  sendPasswordResetEmail,
-  updateProfile as fbUpdateProfile,
-  onAuthStateChanged, 
-  User,
-  doc, 
-  getDoc, 
-  setDoc,
   collection,
   query,
   where,
   getDocs,
   addDoc,
-  deleteDoc,
   orderBy,
-  limit,
-  handleFirestoreError,
-  OperationType
+  limit
 } from '../utils/firebase';
 import { UserCustomization, DEFAULT_CUSTOMIZATION } from '../data/customizationItems';
 
@@ -33,7 +17,7 @@ export interface UserProfile {
   username: string;
   displayName: string;
   display_name?: string;
-  email: string;
+  email?: string;
   avatarUrl: string;
   avatar_url?: string;
   role: 'user' | 'moderator' | 'admin';
@@ -45,6 +29,10 @@ export interface UserProfile {
   created_at?: string;
   updatedAt: string;
   updated_at?: string;
+  preferences?: {
+    soundEnabled?: boolean;
+    theme?: string;
+  };
 }
 
 export interface GameScoreRecord {
@@ -79,62 +67,31 @@ export type AuthStatus =
 
 export function getFriendlyAuthErrorMessage(error: any): string {
   if (!error) return 'An unexpected error occurred. Please try again.';
-  
-  const code = error.code || '';
-  const message = error.message || '';
-
-  if (code) {
-    console.warn('[GAMENOVA Auth]', code, message);
-  }
-
-  switch (code) {
-    case 'auth/email-already-in-use':
-      return 'Email already in use';
-    case 'auth/invalid-email':
-      return 'Invalid email address';
-    case 'auth/weak-password':
-      return 'Password must be at least 6 characters';
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential':
-      return 'Invalid email or password';
-    case 'auth/too-many-requests':
-      return 'Too many attempts. Please try again later.';
-    case 'auth/network-request-failed':
-      return 'Network connection error. Please check your internet connection.';
-    case 'auth/popup-closed-by-user':
-      return 'Sign-in popup was closed.';
-    case 'auth/operation-not-allowed':
-      return 'Sign-in method is currently disabled.';
-    default:
-      if (message.includes('Username is required') ||
-          message.includes('Username must be') ||
-          message.includes('Invalid email') ||
-          message.includes('Password must be') ||
-          message.includes('Passwords do not match') ||
-          message.includes('Email already in use')) {
-        return message;
-      }
-      return 'Authentication failed. Please check your credentials and try again.';
-  }
+  return error.message || 'Action could not be completed.';
 }
 
+const LOCAL_PROFILE_KEY = 'gamenova_local_profile';
+const LOCAL_FAVORITES_KEY = 'gamenova_favorites';
+const LOCAL_SCORES_KEY = 'gamenova_scores';
+const LOCAL_RATINGS_KEY = 'gamenova_ratings';
+
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   profile: UserProfile | null;
   username: string;
   loading: boolean;
   authStatus: AuthStatus;
   isAdmin: boolean;
+  createLocalProfile: (username: string, avatarUrl?: string, avatarId?: string) => UserProfile;
   login: (email: string, pass: string) => Promise<UserProfile>;
   register: (email: string, pass: string, username: string) => Promise<UserProfile>;
   signInWithGoogle: () => Promise<UserProfile>;
-  logout: () => Promise<void>;
+  logout: () => void;
   resetPassword: (email: string) => Promise<void>;
-  updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
-  updateCustomization: (customization: Partial<UserCustomization>) => Promise<void>;
+  updateUserProfile: (data: Partial<UserProfile>) => void;
+  updateCustomization: (customization: Partial<UserCustomization>) => void;
   favorites: string[];
-  toggleFavorite: (gameId: string, gameSlug: string) => Promise<void>;
+  toggleFavorite: (gameId: string, gameSlug: string) => void;
   submitScore: (gameSlug: string, gameTitle: string, score: number) => Promise<void>;
   submitRating: (gameSlug: string, rating: number, review?: string) => Promise<void>;
   getGameScores: (gameSlug: string) => Promise<GameScoreRecord[]>;
@@ -144,86 +101,67 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking_session');
-  const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<string[]>([]);
-
-  // Derived username ensuring safe fallback (prefer displayName if present, then username)
-  const username = profile?.displayName || profile?.username || user?.displayName || (user ? 'GAMENOVA User' : '');
-
-  // Check if current user has admin authority
-  const isAdmin = Boolean(
-    profile?.role === 'admin' ||
-    user?.email?.toLowerCase() === 'efxbro1237@gmail.com' ||
-    user?.email?.toLowerCase() === 'admin@gamenova.io'
-  );
-
-  // Fetch or safely bootstrap Firestore user profile
-  const fetchOrCreateUserProfile = useCallback(async (fbUser: User, customUsername?: string): Promise<UserProfile> => {
-    setAuthStatus('loading_profile');
-    const userDocRef = doc(db, 'users', fbUser.uid);
-    let snap;
+  // Synchronous initialization from localStorage for instant, zero-flicker loading
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
     try {
-      snap = await getDoc(userDocRef);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.GET, `users/${fbUser.uid}`);
+      const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      console.warn('[GAMENOVA Profile] Failed to read local profile:', e);
     }
+    return null;
+  });
 
-    const isUserAdmin = 
-      fbUser.email?.toLowerCase() === 'efxbro1237@gmail.com' ||
-      fbUser.email?.toLowerCase() === 'admin@gamenova.io' ||
-      fbUser.email?.toLowerCase().includes('admin');
-
-    if (snap && snap.exists()) {
-      const data = snap.data();
-      const resolvedAvatar = data.customization?.avatarUrl || data.avatarUrl || data.avatar_url || fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`;
-      const existingProfile: UserProfile = {
-        userId: fbUser.uid,
-        uid: fbUser.uid,
-        username: data.username || customUsername || fbUser.displayName || 'GAMENOVA User',
-        displayName: data.displayName || data.display_name || data.username || fbUser.displayName || 'GAMENOVA User',
-        display_name: data.display_name || data.displayName || data.username || fbUser.displayName || 'GAMENOVA User',
-        email: fbUser.email || data.email || '',
-        avatarUrl: resolvedAvatar,
-        avatar_url: resolvedAvatar,
-        role: data.role || (isUserAdmin ? 'admin' : 'user'),
-        level: data.level || 1,
-        xp: data.xp || 100,
-        bio: data.bio || 'Arcade player on GAMENOVA',
-        customization: {
-          ...DEFAULT_CUSTOMIZATION,
-          ...(data.customization || {}),
-          avatarUrl: resolvedAvatar
-        },
-        createdAt: data.createdAt || data.created_at || new Date().toISOString(),
-        created_at: data.created_at || data.createdAt || new Date().toISOString(),
-        updatedAt: data.updatedAt || data.updated_at || new Date().toISOString(),
-        updated_at: data.updated_at || data.updatedAt || new Date().toISOString()
-      };
-      setProfile(existingProfile);
-      setAuthStatus('profile_loaded');
-      return existingProfile;
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_FAVORITES_KEY);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      console.warn('[GAMENOVA Favorites] Failed to read local favorites:', e);
     }
+    return [];
+  });
 
-    // Bootstrap first-time profile
-    const chosenUsername = customUsername || fbUser.displayName || fbUser.email?.split('@')[0] || 'GAMENOVA User';
+  const loading = false;
+  const authStatus: AuthStatus = profile ? 'profile_loaded' : 'unauthenticated';
+
+  // Derived username ensuring safe fallback
+  const username = profile?.displayName || profile?.username || '';
+
+  // Local user has administrative authority to manage custom games and test features
+  const isAdmin = true;
+
+  // Create or set a local profile (no database, no password, instant)
+  const createLocalProfile = (chosenUsername: string, chosenAvatarUrl?: string, chosenAvatarId?: string): UserProfile => {
+    const trimmed = chosenUsername.trim() || 'Gamer';
     const now = new Date().toISOString();
+    const avatarUrl = chosenAvatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(trimmed)}`;
+    
     const newProfile: UserProfile = {
-      userId: fbUser.uid,
-      uid: fbUser.uid,
-      username: chosenUsername,
-      displayName: chosenUsername,
-      display_name: chosenUsername,
-      email: fbUser.email || '',
-      avatarUrl: fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
-      avatar_url: fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
-      role: isUserAdmin ? 'admin' : 'user',
+      userId: 'local_' + Math.random().toString(36).substring(2, 9),
+      uid: 'local_' + Math.random().toString(36).substring(2, 9),
+      username: trimmed,
+      displayName: trimmed,
+      display_name: trimmed,
+      avatarUrl,
+      avatar_url: avatarUrl,
+      role: 'admin',
       level: 1,
       xp: 150,
-      bio: 'Arcade challenger on GAMENOVA',
-      customization: DEFAULT_CUSTOMIZATION,
+      bio: 'Arcade player on GAMENOVA. Ready for high scores and new challenges.',
+      customization: {
+        ...DEFAULT_CUSTOMIZATION,
+        avatarId: chosenAvatarId || 'avatar_nova_pilot',
+        avatarUrl
+      },
+      preferences: {
+        soundEnabled: true,
+        theme: 'dark'
+      },
       createdAt: now,
       created_at: now,
       updatedAt: now,
@@ -231,456 +169,183 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     try {
-      await setDoc(userDocRef, newProfile);
+      localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(newProfile));
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, `users/${fbUser.uid}`);
+      console.warn('[GAMENOVA Profile] Failed to write local profile:', e);
     }
 
     setProfile(newProfile);
-    setAuthStatus('profile_loaded');
-    return newProfile;
-  }, []);
-
-  const loadUserFavorites = useCallback(async (userId: string) => {
-    try {
-      const q = query(collection(db, 'favorites'), where('userId', '==', userId));
-      const snap = await getDocs(q);
-      const favGameIds: string[] = [];
-      snap.forEach((docSnap) => {
-        const item = docSnap.data();
-        if (item.gameId) favGameIds.push(item.gameId);
-      });
-      setFavorites(favGameIds);
-    } catch (e) {
-      handleFirestoreError(e, OperationType.LIST, 'favorites');
-    }
-  }, []);
-
-  // Primary Firebase Auth State Listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setUser(fbUser);
-      if (fbUser) {
-        setAuthStatus('authenticated');
-        try {
-          await fetchOrCreateUserProfile(fbUser);
-          await loadUserFavorites(fbUser.uid);
-        } catch (err) {
-          console.warn('[GAMENOVA Auth] Safe fallback after profile fetch notice:', err);
-          // Safe fallback so UI is not stuck
-          setProfile({
-            userId: fbUser.uid,
-            uid: fbUser.uid,
-            username: fbUser.displayName || 'GAMENOVA User',
-            displayName: fbUser.displayName || 'GAMENOVA User',
-            email: fbUser.email || '',
-            avatarUrl: fbUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
-            role: 'user',
-            level: 1,
-            xp: 100,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-          setAuthStatus('profile_loaded');
-        }
-      } else {
-        setProfile(null);
-        setFavorites([]);
-        setAuthStatus('unauthenticated');
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [fetchOrCreateUserProfile, loadUserFavorites]);
-
-  // Firebase Email/Password Registration with Unique Username Reservation
-  const register = async (email: string, pass: string, rawUsername: string): Promise<UserProfile> => {
-    const trimmedUsername = rawUsername.trim();
-    
-    // Validation: Username format
-    if (!trimmedUsername) {
-      throw new Error('Username is required.');
-    }
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
-      throw new Error('Username must be between 3 and 20 characters.');
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
-      throw new Error('Username can only contain letters, numbers, and underscores.');
-    }
-
-    const normalizedUsername = trimmedUsername.toLowerCase();
-
-    // 1. Create Firebase Auth user
-    const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-    const fbUser = cred.user;
-
-    // 2. Update Firebase Auth displayName
-    try {
-      await fbUpdateProfile(fbUser, { displayName: trimmedUsername });
-    } catch (e) {
-      console.warn('Update displayName warning:', e);
-    }
-
-    // 3. Save complete user profile in users/{uid} in Firestore
-    const isUserAdmin = 
-      email.toLowerCase() === 'efxbro1237@gmail.com' ||
-      email.toLowerCase() === 'admin@gamenova.io' ||
-      email.toLowerCase().includes('admin');
-
-    const now = new Date().toISOString();
-    const newProfile: UserProfile = {
-      userId: fbUser.uid,
-      uid: fbUser.uid,
-      username: trimmedUsername,
-      displayName: trimmedUsername,
-      display_name: trimmedUsername,
-      email: fbUser.email || email.trim(),
-      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
-      avatar_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${fbUser.uid}`,
-      role: isUserAdmin ? 'admin' : 'user',
-      level: 1,
-      xp: 200,
-      bio: 'Arcade champion on GAMENOVA',
-      customization: DEFAULT_CUSTOMIZATION,
-      createdAt: now,
-      created_at: now,
-      updatedAt: now,
-      updated_at: now
-    };
-
-    const userDocRef = doc(db, 'users', fbUser.uid);
-    try {
-      await setDoc(userDocRef, newProfile);
-    } catch (e) {
-      console.warn('[GAMENOVA Auth] Firestore write profile error:', e);
-    }
-
-    // 4. Reserve unique username mapping in Firestore (non-blocking)
-    try {
-      const usernameDocRef = doc(db, 'usernames', normalizedUsername);
-      await setDoc(usernameDocRef, {
-        username: trimmedUsername,
-        userId: fbUser.uid,
-        uid: fbUser.uid,
-        createdAt: now
-      });
-    } catch (e) {
-      // Non-fatal if usernames reservation fails
-      console.warn('[GAMENOVA Auth] Username reservation notice:', e);
-    }
-
-    // 5. Update local application auth state with confirmed profile
-    setUser(fbUser);
-    setProfile(newProfile);
-    setAuthStatus('profile_loaded');
     return newProfile;
   };
 
-  // Firebase Email/Password Login
-  const login = async (email: string, pass: string): Promise<UserProfile> => {
-    const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
-    const fbUser = cred.user;
-    setUser(fbUser);
-    const loadedProfile = await fetchOrCreateUserProfile(fbUser);
-    await loadUserFavorites(fbUser.uid);
-    return loadedProfile;
-  };
-
-  // Firebase Google Popup Sign In
-  const signInWithGoogle = async (): Promise<UserProfile> => {
-    const cred = await signInWithPopup(auth, googleProvider);
-    const fbUser = cred.user;
-    setUser(fbUser);
-    const loadedProfile = await fetchOrCreateUserProfile(fbUser);
-    await loadUserFavorites(fbUser.uid);
-    return loadedProfile;
-  };
-
-  // Logout
-  const logout = async () => {
-    await fbSignOut(auth);
-    setUser(null);
-    setProfile(null);
-    setFavorites([]);
-    setAuthStatus('unauthenticated');
-  };
-
-  // Forgot password
-  const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email.trim());
-  };
-
-  // Update profile
-  const updateUserProfile = async (data: Partial<UserProfile>) => {
-    if (!user) {
-      throw new Error('You must be signed in to update your profile.');
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const now = new Date().toISOString();
-
-    const previousUsername = profile?.username;
-    let newUsername = data.username !== undefined ? data.username.trim() : undefined;
-    let newDisplayName = data.displayName !== undefined ? data.displayName.trim() : undefined;
-
-    // Validate Display Name if provided
-    if (newDisplayName !== undefined) {
-      if (!newDisplayName) {
-        throw new Error('Display name cannot be empty.');
-      }
-      if (newDisplayName.length < 2 || newDisplayName.length > 30) {
-        throw new Error('Display name must be between 2 and 30 characters.');
-      }
-    }
-
-    // Validate Username if provided
-    if (newUsername !== undefined) {
-      if (!newUsername) {
-        throw new Error('Username cannot be empty.');
-      }
-      if (newUsername.length < 3 || newUsername.length > 20) {
-        throw new Error('Username must be between 3 and 20 characters.');
-      }
-      if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
-        throw new Error('Username can only contain letters, numbers, and underscores.');
-      }
-
-      // Check uniqueness in usernames registry if username changed
-      const normalizedNew = newUsername.toLowerCase();
-      const normalizedOld = previousUsername ? previousUsername.toLowerCase() : '';
-
-      if (normalizedNew !== normalizedOld) {
-        const usernameDocRef = doc(db, 'usernames', normalizedNew);
-        try {
-          const usernameSnap = await getDoc(usernameDocRef);
-          if (usernameSnap.exists()) {
-            const existingMapping = usernameSnap.data();
-            if (existingMapping.userId && existingMapping.userId !== user.uid) {
-              throw new Error(`Username "@${newUsername}" is already taken by another gamer.`);
-            }
-          }
-        } catch (uErr: any) {
-          if (uErr.message && uErr.message.includes('already taken')) {
-            throw uErr;
-          }
-          console.warn('[GAMENOVA Auth] Username check notice:', uErr);
-        }
-
-        // Reserve the new username in usernames collection
-        try {
-          await setDoc(usernameDocRef, {
-            username: newUsername,
-            userId: user.uid,
-            uid: user.uid,
-            updatedAt: now
-          });
-
-          // Clean up old username doc if it existed and was different
-          if (normalizedOld && normalizedOld !== normalizedNew) {
-            try {
-              const oldUsernameDocRef = doc(db, 'usernames', normalizedOld);
-              await deleteDoc(oldUsernameDocRef);
-            } catch (delErr) {
-              console.warn('[GAMENOVA Auth] Old username cleanup notice:', delErr);
-            }
-          }
-        } catch (reserveErr) {
-          console.warn('[GAMENOVA Auth] Username reservation notice:', reserveErr);
-        }
-      }
-    }
-
-    // Build payload to merge into users/{uid}
-    const updatedCustomization: UserCustomization = {
-      ...(profile?.customization || DEFAULT_CUSTOMIZATION),
-      ...(data.customization || {})
-    };
-
-    const targetAvatar = data.avatarUrl || data.avatar_url || data.customization?.avatarUrl || profile?.avatarUrl || profile?.avatar_url;
-    if (targetAvatar) {
-      updatedCustomization.avatarUrl = targetAvatar;
-    }
-
-    const updatedFields: Record<string, any> = {
-      ...data,
-      customization: updatedCustomization,
-      updatedAt: now,
-      updated_at: now
-    };
-
-    if (targetAvatar) {
-      updatedFields.avatarUrl = targetAvatar;
-      updatedFields.avatar_url = targetAvatar;
-    }
-
-    if (newDisplayName !== undefined) {
-      updatedFields.displayName = newDisplayName;
-      updatedFields.display_name = newDisplayName;
-    }
-    if (newUsername !== undefined) {
-      updatedFields.username = newUsername;
-    }
-    if (data.bio !== undefined) {
-      updatedFields.bio = data.bio.trim();
-    }
-
-    try {
-      await setDoc(userDocRef, updatedFields, { merge: true });
-    } catch (e) {
-      handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-      throw new Error('Failed to save profile changes to database.');
-    }
-
-    // Synchronize Firebase Auth displayName if applicable
-    const targetAuthName = newDisplayName || newUsername || profile?.displayName || profile?.username;
-    if (targetAuthName && auth.currentUser) {
-      try {
-        await fbUpdateProfile(auth.currentUser, { 
-          displayName: targetAuthName,
-          photoURL: targetAvatar || auth.currentUser.photoURL
-        });
-      } catch (authErr) {
-        console.warn('[GAMENOVA Auth] Firebase Auth displayName sync notice:', authErr);
-      }
-    }
-
-    // Update local React state immediately so UI updates in real-time across navbar, header, modals
+  // Update profile attributes in localStorage
+  const updateUserProfile = (data: Partial<UserProfile>) => {
     setProfile(prev => {
       if (!prev) return null;
-      return {
+      const updated: UserProfile = {
         ...prev,
-        ...updatedFields,
-        displayName: newDisplayName !== undefined ? newDisplayName : prev.displayName,
-        display_name: newDisplayName !== undefined ? newDisplayName : prev.display_name,
-        username: newUsername !== undefined ? newUsername : prev.username,
+        ...data,
+        displayName: data.displayName !== undefined ? data.displayName.trim() : (data.username ? data.username.trim() : prev.displayName),
+        display_name: data.displayName !== undefined ? data.displayName.trim() : (data.username ? data.username.trim() : prev.display_name),
+        username: data.username !== undefined ? data.username.trim() : prev.username,
         bio: data.bio !== undefined ? data.bio.trim() : prev.bio,
-        avatarUrl: targetAvatar || prev.avatarUrl,
-        avatar_url: targetAvatar || prev.avatar_url,
-        customization: updatedCustomization
+        avatarUrl: data.avatarUrl || data.avatar_url || prev.avatarUrl,
+        avatar_url: data.avatarUrl || data.avatar_url || prev.avatar_url,
+        customization: {
+          ...(prev.customization || DEFAULT_CUSTOMIZATION),
+          ...(data.customization || {}),
+          avatarUrl: data.avatarUrl || data.avatar_url || prev.customization?.avatarUrl || prev.avatarUrl
+        },
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
+      try {
+        localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('[GAMENOVA Profile] Failed to save updated profile:', e);
+      }
+      return updated;
     });
   };
 
-  // Customization update with Firestore persistence
-  const updateCustomization = async (newCustomization: Partial<UserCustomization>) => {
-    if (!user) {
-      throw new Error('You must be signed in to save customization.');
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const now = new Date().toISOString();
-
-    const mergedCustomization: UserCustomization = {
-      ...(profile?.customization || DEFAULT_CUSTOMIZATION),
-      ...newCustomization
-    };
-
-    const updatePayload: Record<string, any> = {
-      customization: mergedCustomization,
-      updatedAt: now,
-      updated_at: now
-    };
-
-    if (newCustomization.avatarUrl) {
-      updatePayload.avatarUrl = newCustomization.avatarUrl;
-      updatePayload.avatar_url = newCustomization.avatarUrl;
-    }
-
-    try {
-      await setDoc(userDocRef, updatePayload, { merge: true });
-    } catch (e) {
-      handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`);
-      throw new Error('Failed to save customization to database.');
-    }
-
+  // Update avatar, frames, and badges in localStorage
+  const updateCustomization = (newCustomization: Partial<UserCustomization>) => {
     setProfile(prev => {
       if (!prev) return null;
-      return {
+      const mergedCustomization: UserCustomization = {
+        ...(prev.customization || DEFAULT_CUSTOMIZATION),
+        ...newCustomization
+      };
+      const updated: UserProfile = {
         ...prev,
-        ...updatePayload,
         customization: mergedCustomization,
         avatarUrl: newCustomization.avatarUrl || prev.avatarUrl,
         avatar_url: newCustomization.avatarUrl || prev.avatar_url,
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
+      try {
+        localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('[GAMENOVA Profile] Failed to save customization:', e);
+      }
+      return updated;
     });
   };
 
-  // Cloud Favorites sync
-  const toggleFavorite = async (gameId: string, gameSlug: string) => {
-    const nextFavorites = favorites.includes(gameId)
-      ? favorites.filter(id => id !== gameId)
-      : [...favorites, gameId];
-    setFavorites(nextFavorites);
-
-    if (!user) return;
-
+  // Reset / Clear local profile
+  const logout = () => {
     try {
-      const q = query(
-        collection(db, 'favorites'), 
-        where('userId', '==', user.uid), 
-        where('gameId', '==', gameId)
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        for (const docItem of snap.docs) {
-          await deleteDoc(docItem.ref);
-        }
-      } else {
-        await addDoc(collection(db, 'favorites'), {
-          userId: user.uid,
-          gameId,
-          gameSlug,
-          createdAt: new Date().toISOString()
-        });
-      }
+      localStorage.removeItem(LOCAL_PROFILE_KEY);
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, 'favorites');
+      console.warn('[GAMENOVA Profile] Failed to clear local profile:', e);
     }
+    setProfile(null);
   };
 
-  // High Score Submission with XP progression
+  // Toggle favorite games in localStorage
+  const toggleFavorite = (gameId: string, _gameSlug: string) => {
+    setFavorites(prev => {
+      const next = prev.includes(gameId) ? prev.filter(id => id !== gameId) : [...prev, gameId];
+      try {
+        localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn('[GAMENOVA Favorites] Failed to write favorites:', e);
+      }
+      return next;
+    });
+  };
+
+  // Compatibility stubs for any legacy auth calls
+  const login = async (_email: string, _pass: string): Promise<UserProfile> => {
+    return createLocalProfile(_email.split('@')[0] || 'Gamer');
+  };
+
+  const register = async (_email: string, _pass: string, rawUsername: string): Promise<UserProfile> => {
+    return createLocalProfile(rawUsername);
+  };
+
+  const signInWithGoogle = async (): Promise<UserProfile> => {
+    return createLocalProfile('Gamer');
+  };
+
+  const resetPassword = async (_email: string): Promise<void> => {
+    return;
+  };
+
+  // Submit high score locally and optionally sync
   const submitScore = async (gameSlug: string, gameTitle: string, score: number) => {
-    if (!user || !profile) return;
+    const currentUsername = profile?.username || 'Gamer';
+    const currentAvatar = profile?.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=player';
+    
+    const record: GameScoreRecord = {
+      id: 'score_' + Date.now(),
+      userId: profile?.userId || 'local_user',
+      username: currentUsername,
+      avatarUrl: currentAvatar,
+      gameSlug,
+      gameTitle,
+      score,
+      achievedAt: new Date().toISOString()
+    };
 
     try {
-      await addDoc(collection(db, 'scores'), {
-        userId: user.uid,
-        username: profile.username || user.displayName || 'GAMENOVA User',
-        avatarUrl: profile.avatarUrl,
-        gameSlug,
-        gameTitle,
-        score,
-        achievedAt: new Date().toISOString()
-      });
+      const raw = localStorage.getItem(LOCAL_SCORES_KEY);
+      const list: GameScoreRecord[] = raw ? JSON.parse(raw) : [];
+      const updated = [record, ...list].slice(0, 100);
+      localStorage.setItem(LOCAL_SCORES_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to save score locally', e);
+    }
 
-      // Award XP
+    // Award XP to local profile
+    if (profile) {
       const currentXp = (profile.xp || 0) + Math.min(Math.floor(score / 10), 100);
       const newLevel = Math.floor(currentXp / 500) + 1;
-      await updateUserProfile({ xp: currentXp, level: newLevel });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'scores');
+      updateUserProfile({ xp: currentXp, level: newLevel });
+    }
+
+    // Best-effort push to Firestore if online
+    try {
+      await addDoc(collection(db, 'scores'), record);
+    } catch {
+      // Offline safe
     }
   };
 
-  // User Game Rating Submission
+  // Submit rating locally and optionally sync
   const submitRating = async (gameSlug: string, rating: number, review: string = '') => {
-    if (!user || !profile) return;
+    const currentUsername = profile?.username || 'Gamer';
+    const currentAvatar = profile?.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=player';
+
+    const record: GameRatingRecord = {
+      id: 'rating_' + Date.now(),
+      userId: profile?.userId || 'local_user',
+      username: currentUsername,
+      avatarUrl: currentAvatar,
+      gameSlug,
+      rating,
+      review,
+      updatedAt: new Date().toISOString()
+    };
 
     try {
-      await addDoc(collection(db, 'ratings'), {
-        userId: user.uid,
-        username: profile.username || user.displayName || 'GAMENOVA User',
-        avatarUrl: profile.avatarUrl,
-        gameSlug,
-        rating,
-        review,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'ratings');
+      const raw = localStorage.getItem(LOCAL_RATINGS_KEY);
+      const list: GameRatingRecord[] = raw ? JSON.parse(raw) : [];
+      const updated = [record, ...list.filter(r => r.gameSlug !== gameSlug)].slice(0, 50);
+      localStorage.setItem(LOCAL_RATINGS_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to save rating locally', e);
+    }
+
+    try {
+      await addDoc(collection(db, 'ratings'), record);
+    } catch {
+      // Offline safe
     }
   };
 
-  // Leaderboard retrieval
+  // Retrieve scores
   const getGameScores = async (gameSlug: string): Promise<GameScoreRecord[]> => {
     try {
       const q = query(
@@ -690,18 +355,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         limit(10)
       );
       const snap = await getDocs(q);
-      const scores: GameScoreRecord[] = [];
-      snap.forEach(docSnap => {
-        scores.push({ id: docSnap.id, ...docSnap.data() } as GameScoreRecord);
-      });
-      return scores;
-    } catch (err) {
-      handleFirestoreError(err, OperationType.LIST, 'scores');
-      return [];
+      if (!snap.empty) {
+        const list: GameScoreRecord[] = [];
+        snap.forEach(d => list.push({ id: d.id, ...d.data() } as GameScoreRecord));
+        return list;
+      }
+    } catch {
+      // Offline fallback
     }
+
+    try {
+      const raw = localStorage.getItem(LOCAL_SCORES_KEY);
+      if (raw) {
+        const all: GameScoreRecord[] = JSON.parse(raw);
+        return all
+          .filter(s => s.gameSlug === gameSlug)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10);
+      }
+    } catch {
+      // Fallback
+    }
+
+    return [];
   };
 
-  // Ratings retrieval
+  // Retrieve ratings
   const getGameRatings = async (gameSlug: string): Promise<GameRatingRecord[]> => {
     try {
       const q = query(
@@ -710,26 +389,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         limit(15)
       );
       const snap = await getDocs(q);
-      const ratings: GameRatingRecord[] = [];
-      snap.forEach(docSnap => {
-        ratings.push({ id: docSnap.id, ...docSnap.data() } as GameRatingRecord);
-      });
-      return ratings;
-    } catch (err) {
-      handleFirestoreError(err, OperationType.LIST, 'ratings');
-      return [];
+      if (!snap.empty) {
+        const list: GameRatingRecord[] = [];
+        snap.forEach(d => list.push({ id: d.id, ...d.data() } as GameRatingRecord));
+        return list;
+      }
+    } catch {
+      // Offline fallback
     }
+
+    try {
+      const raw = localStorage.getItem(LOCAL_RATINGS_KEY);
+      if (raw) {
+        const all: GameRatingRecord[] = JSON.parse(raw);
+        return all.filter(r => r.gameSlug === gameSlug);
+      }
+    } catch {
+      // Fallback
+    }
+
+    return [];
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: profile,
         profile,
         username,
         loading,
         authStatus,
         isAdmin,
+        createLocalProfile,
         login,
         register,
         signInWithGoogle,
@@ -757,4 +448,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

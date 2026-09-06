@@ -66,37 +66,39 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 md:p-12 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-6 md:p-12 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] mt-2 sm:mt-6">
         {/* Search Input Bar */}
-        <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-white">
-          <Search className="w-5 h-5 text-[#6D28D9] shrink-0" />
+        <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center gap-2.5 sm:gap-3 bg-white">
+          <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#6D28D9] shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search 30 games, genres, gameplay tags..."
-            className="w-full bg-transparent text-base text-[#111827] placeholder-[#6B7280] font-sans focus:outline-none"
+            placeholder="Search 30 games, genres, tags..."
+            className="w-full bg-transparent text-sm sm:text-base text-[#111827] placeholder-[#6B7280] font-sans focus:outline-none"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 text-slate-400 hover:text-[#111827] cursor-pointer"
+              aria-label="Clear search"
+              className="p-1.5 text-slate-400 hover:text-[#111827] cursor-pointer touch-manipulation"
             >
               <X className="w-4 h-4" />
             </button>
           )}
           <button
             onClick={onClose}
-            className="px-2 py-0.5 text-xs font-mono rounded bg-slate-100 text-[#6B7280] hover:text-[#111827] border border-slate-200 cursor-pointer"
+            aria-label="Close search"
+            className="px-2.5 py-1 text-xs font-mono rounded-lg bg-slate-100 text-[#6B7280] hover:text-[#111827] border border-slate-200 cursor-pointer touch-manipulation"
           >
             ESC
           </button>
         </div>
 
         {/* Quick Genre Filters */}
-        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="px-3 sm:px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {categories.map((cat) => (
             <button
               key={cat}
@@ -104,7 +106,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 sound.playClick();
                 setActiveCategory(cat);
               }}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-3 py-1 min-h-[30px] rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer touch-manipulation ${
                 activeCategory === cat
                   ? 'bg-[#6D28D9] text-white shadow-xs'
                   : 'bg-white text-slate-600 hover:text-[#111827] border border-slate-200'
@@ -116,7 +118,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         </div>
 
         {/* Results List */}
-        <div className="p-3 overflow-y-auto space-y-1 flex-1 divide-y divide-slate-100">
+        <div className="p-2 sm:p-3 overflow-y-auto space-y-1 flex-1 divide-y divide-slate-100">
           {filteredGames.length > 0 ? (
             filteredGames.map((game) => (
               <div
@@ -126,10 +128,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   onSelectGame(game);
                   onClose();
                 }}
-                className="group p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between gap-4"
+                className="group p-2 sm:p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between gap-2.5 sm:gap-4 touch-manipulation"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative w-16 aspect-video rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="relative w-12 sm:w-16 aspect-video rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
                     <img
                       src={game.thumbnailUrl}
                       alt={game.title}
@@ -137,30 +139,30 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       referrerPolicy="no-referrer"
                     />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-[#111827] text-sm group-hover:text-[#6D28D9] transition-colors truncate">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <h4 className="font-bold text-[#111827] text-xs sm:text-sm group-hover:text-[#6D28D9] transition-colors truncate">
                         {game.title}
                       </h4>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-medium border border-slate-200">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] bg-slate-100 text-slate-600 font-medium border border-slate-200 shrink-0">
                         {game.category}
                       </span>
                     </div>
-                    <p className="text-xs text-[#6B7280] truncate mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-[#6B7280] truncate mt-0.5">
                       {game.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                   <div className="hidden sm:flex items-center gap-1 text-xs text-amber-500 font-semibold bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                     <span className="text-[#111827]">{game.rating ? game.rating.toFixed(1) : '4.8'}</span>
                   </div>
 
-                  <button className="px-3.5 py-1.5 rounded-lg bg-slate-100 group-hover:bg-[#6D28D9] text-[#111827] group-hover:text-white text-xs font-bold flex items-center gap-1 transition-all border border-slate-200 group-hover:border-transparent cursor-pointer shadow-xs">
+                  <button className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-slate-100 group-hover:bg-[#6D28D9] text-[#111827] group-hover:text-white text-xs font-bold flex items-center gap-1 transition-all border border-slate-200 group-hover:border-transparent cursor-pointer shadow-xs touch-manipulation">
                     <Play className="w-3 h-3 fill-current" />
-                    <span>Play</span>
+                    <span className="hidden sm:inline">Play</span>
                   </button>
                 </div>
               </div>
@@ -174,7 +176,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium px-4">
+        <div className="p-2.5 sm:p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium px-4">
           <span>{filteredGames.length} games available</span>
           <span className="hidden sm:inline">Press Enter or click to launch</span>
         </div>

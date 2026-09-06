@@ -65,9 +65,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setSelectedBadge(profile.customization?.badge || 'badge_vanguard');
     } else if (user) {
       setDisplayName(user.displayName || 'GAMENOVA User');
-      setUsernameInput(user.email?.split('@')[0] || 'player');
+      setUsernameInput(user.username || 'player');
       setEditBio('Arcade player on GAMENOVA');
-      const defaultUrl = user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
+      const defaultUrl = user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.userId || 'player'}`;
       setSelectedAvatar(defaultUrl);
       setSelectedAvatarId('avatar_nova_pilot');
       setSelectedFrame('frame_default');
@@ -251,14 +251,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       </div>
 
       {/* Header Profile Summary Card */}
-      <div className="rounded-3xl bg-white border border-slate-200/80 p-6 sm:p-8 relative overflow-hidden shadow-xs">
+      <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 p-4 sm:p-8 relative overflow-hidden shadow-xs">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
-          <div className="flex items-center gap-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
             <div className="relative shrink-0">
               <img
                 src={activeAvatar}
                 alt={currentDisplayName}
-                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-purple-50 object-cover shadow-sm transition-all ${equippedFrameClass}`}
+                className={`w-16 h-16 sm:w-24 sm:h-24 rounded-2xl bg-purple-50 object-cover shadow-sm transition-all ${equippedFrameClass}`}
                 referrerPolicy="no-referrer"
               />
               {equippedBadgeItem && (
@@ -269,8 +269,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
 
             <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-display font-black text-2xl sm:text-3xl tracking-tight text-[#111827]">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <h1 className="font-display font-black text-xl sm:text-3xl tracking-tight text-[#111827]">
                   {currentDisplayName}
                 </h1>
                 <span className="text-xs font-mono font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
@@ -527,7 +527,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 animate-fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <div className="text-xs text-emerald-800 font-bold">
-                  Profile and customization changes saved successfully to your Firestore account!
+                  Profile and customization changes saved successfully!
                 </div>
               </div>
             )}
@@ -845,7 +845,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <div>
                   <h4 className="font-bold text-sm text-[#111827]">Ready to apply changes?</h4>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Your username, display name, avatar, frame, and badge will sync directly to your Firestore profile.
+                    Your username, display name, avatar, frame, and badge will be updated immediately in your profile.
                   </p>
                 </div>
 

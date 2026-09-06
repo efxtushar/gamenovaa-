@@ -78,15 +78,29 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
 
   // Mobile detection & Fullscreen listener
   useEffect(() => {
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      setShowMobileControls(true);
-    }
+    const checkIsMobile = () => {
+      if (typeof window === 'undefined') return false;
+      const isTouch = 'ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0);
+      const isMobileViewport = window.innerWidth < 1024;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      return isMobileUA || (isTouch && isMobileViewport);
+    };
+
+    setShowMobileControls(checkIsMobile());
+
+    const handleResize = () => {
+      if (checkIsMobile()) {
+        setShowMobileControls(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
 
     const handleFullscreenChange = () => {
       setIsBrowserFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => {
+      window.removeEventListener('resize', handleResize);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, []);
@@ -169,32 +183,48 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
           containerRef.current.focus();
         }
       }}
-      className="fixed inset-0 z-50 bg-[#05070d] text-white flex flex-col w-screen h-screen overflow-hidden select-none outline-none"
+      className="fixed inset-0 z-50 bg-[#05070d] text-white flex flex-col w-full min-h-[100dvh] max-h-[100dvh] h-[100dvh] overflow-hidden select-none outline-none"
     >
       {/* MINIMAL IN-GAME ACTION BAR: Back • Pause • Sound • Fullscreen */}
-      <header className="h-12 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between gap-4 shrink-0 z-40">
+      <header className="h-11 sm:h-12 bg-slate-900 border-b border-slate-800 px-2 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-40">
         {/* Left: Back */}
         <button
           onClick={handleExitGame}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
           title="Back to games (Esc)"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Games</span>
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Back to Games</span>
+          <span className="sm:hidden text-[11px]">Exit</span>
         </button>
 
         {/* Center: Game Title */}
-        <span className="text-xs font-bold text-slate-300 hidden md:inline truncate max-w-xs">
+        <span className="text-xs font-bold text-slate-300 truncate max-w-[140px] sm:max-w-xs md:max-w-md text-center">
           {game.title}
         </span>
 
-        {/* Right: Pause • Sound • Fullscreen */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Touch Controls • Pause • Sound • Fullscreen */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Virtual Touch Controls Toggle */}
+          <button
+            onClick={() => setShowMobileControls(prev => !prev)}
+            title="Toggle Virtual Touch Controls"
+            aria-label="Toggle Virtual Touch Controls"
+            className={`p-1.5 px-2 sm:px-2.5 rounded-lg border flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${
+              showMobileControls
+                ? 'bg-[#6D28D9] text-white border-[#6D28D9]'
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span className="hidden md:inline text-[11px]">Controls</span>
+          </button>
+
           {/* Pause / Resume */}
           <button
             onClick={() => setShowPauseModal(prev => !prev)}
             title="Pause Game (P)"
-            className={`p-1.5 px-3 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+            className={`p-1.5 px-2 sm:px-2.5 rounded-lg border flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation ${
               showPauseModal
                 ? 'bg-[#6D28D9] text-white border-[#6D28D9]'
                 : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 hover:text-white'
@@ -208,27 +238,29 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
           <button
             onClick={toggleSound}
             title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            className="p-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer"
+            aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+            className="p-1.5 px-2 sm:px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-purple-400" />}
-            <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Sound'}</span>
+            <span className="hidden lg:inline">{isMuted ? 'Muted' : 'Sound'}</span>
           </button>
 
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
             title="Fullscreen (F)"
-            className="p-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer"
+            aria-label="Toggle Fullscreen"
+            className="p-1.5 px-2 sm:px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
           >
             {isBrowserFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">Fullscreen</span>
+            <span className="hidden lg:inline">Fullscreen</span>
           </button>
         </div>
       </header>
 
       {/* FULL VIEWPORT IMMERSIVE GAME CANVAS STAGE */}
-      <main className="flex-1 relative flex flex-col items-center justify-center bg-[#05070d] overflow-hidden w-full h-[calc(100vh-44px)]">
-        <div className="relative w-full h-full flex items-center justify-center">
+      <main className="flex-1 relative flex flex-col items-center justify-center bg-[#05070d] overflow-hidden w-full min-h-0">
+        <div className="relative w-full flex-1 min-h-0 flex items-center justify-center">
           <Suspense fallback={
             <div className="py-24 flex flex-col items-center justify-center space-y-3 text-[#00E5FF] font-mono text-sm">
               <RefreshCw className="w-8 h-8 animate-spin text-[#00E5FF]" />
@@ -239,9 +271,9 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
           </Suspense>
         </div>
 
-        {/* VIRTUAL TOUCH CONTROLS BAR (Mobile only) */}
+        {/* VIRTUAL TOUCH CONTROLS (Mobile floating overlay) */}
         {showMobileControls && (
-          <div className="shrink-0 w-full z-30">
+          <div className="absolute inset-x-0 bottom-0 pointer-events-none z-30">
             <MobileControls gameSlug={game.slug} />
           </div>
         )}

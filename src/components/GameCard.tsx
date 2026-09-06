@@ -37,9 +37,9 @@ export const GameCard: React.FC<GameCardProps> = ({
   const getSpanClasses = () => {
     switch (actualSize) {
       case 'featured':
-        return 'col-span-2 row-span-2';
+        return 'col-span-1 min-[480px]:col-span-2 row-span-1 min-[480px]:row-span-2';
       case 'wide':
-        return 'col-span-2';
+        return 'col-span-1 min-[480px]:col-span-2';
       case 'tall':
         return 'col-span-1 row-span-2';
       case 'compact':
@@ -52,10 +52,10 @@ export const GameCard: React.FC<GameCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative rounded-2xl bg-white border border-slate-200/90 hover:border-[#6D28D9]/50 transition-all duration-200 cursor-pointer flex flex-col overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 ${getSpanClasses()}`}
+      className={`group relative rounded-xl sm:rounded-2xl bg-white border border-slate-200/90 hover:border-[#6D28D9]/50 transition-all duration-200 cursor-pointer flex flex-col overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 touch-manipulation ${getSpanClasses()}`}
     >
       {/* Game Thumbnail Cover */}
-      <div className={`relative w-full overflow-hidden bg-slate-900 ${actualSize === 'tall' ? 'min-h-[240px] flex-1' : 'aspect-[16/11]'}`}>
+      <div className={`relative w-full overflow-hidden bg-slate-900 ${actualSize === 'tall' ? 'min-h-[200px] sm:min-h-[240px] flex-1' : 'aspect-[16/11]'}`}>
         <GameThumbnail game={game} />
 
         {/* Favorite Button (Top Right) */}
@@ -66,9 +66,9 @@ export const GameCard: React.FC<GameCardProps> = ({
             onToggleFavorite(game.id, e);
           }}
           aria-label={isFavorite ? `Remove ${game.title} from favorites` : `Add ${game.title} to favorites`}
-          className={`absolute top-2.5 right-2.5 p-1.5 rounded-full backdrop-blur-md transition-all z-20 cursor-pointer shadow-sm ${
+          className={`absolute top-2 right-2 p-1.5 min-w-[30px] min-h-[30px] flex items-center justify-center rounded-full backdrop-blur-md transition-all z-20 cursor-pointer shadow-xs touch-manipulation ${
             isFavorite
-              ? 'bg-white text-rose-500 shadow'
+              ? 'bg-white text-rose-500 shadow-sm'
               : 'bg-black/40 hover:bg-black/60 text-white/80 hover:text-white'
           }`}
         >
@@ -77,7 +77,7 @@ export const GameCard: React.FC<GameCardProps> = ({
 
         {/* Hot / Trending Badge */}
         {(game.isTrending || game.trending) && (
-          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-[#6D28D9] text-white text-[10px] font-bold tracking-wide uppercase z-10 flex items-center gap-1 shadow-md">
+          <div className="absolute top-2 left-2 px-1.5 sm:px-2 py-0.5 rounded-md bg-[#6D28D9] text-white text-[9px] sm:text-[10px] font-bold tracking-wide uppercase z-10 flex items-center gap-1 shadow-md">
             <Flame className="w-2.5 h-2.5 fill-current" />
             <span>Hot</span>
           </div>
@@ -85,18 +85,18 @@ export const GameCard: React.FC<GameCardProps> = ({
       </div>
 
       {/* Game Card Footer Info: Title, Genre, Rating */}
-      <div className="p-3 sm:p-3.5 flex items-center justify-between gap-2 bg-white">
+      <div className="p-2.5 sm:p-3.5 flex items-center justify-between gap-1.5 sm:gap-2 bg-white">
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-sm text-[#111827] group-hover:text-[#6D28D9] transition-colors truncate">
+          <h3 className="font-bold text-xs sm:text-sm text-[#111827] group-hover:text-[#6D28D9] transition-colors truncate">
             {game.title}
           </h3>
-          <p className="text-xs text-[#6B7280] truncate mt-0.5">
+          <p className="text-[10px] sm:text-xs text-[#6B7280] truncate mt-0.5">
             {game.category}
           </p>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-amber-500 font-semibold shrink-0 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100">
-          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+        <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-amber-500 font-semibold shrink-0 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100">
+          <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 text-amber-400" />
           <span className="text-[#111827]">{game.rating ? game.rating.toFixed(1) : '4.8'}</span>
         </div>
       </div>

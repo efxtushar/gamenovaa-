@@ -9,7 +9,7 @@ import { CategoryCard } from './components/CategoryCard';
 import { GamePlayer } from './components/GamePlayer';
 import { GameDetailModal } from './components/GameDetailModal';
 import { SearchModal } from './components/SearchModal';
-import { AuthModal } from './components/AuthModal';
+import { ChooseUsernameModal } from './components/ChooseUsernameModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LeaderboardView } from './components/LeaderboardView';
@@ -48,7 +48,7 @@ function MainApp() {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modals & Subviews
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isChooseUsernameOpen, setIsChooseUsernameOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<'overview' | 'favorites' | 'settings'>('overview');
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -106,7 +106,7 @@ function MainApp() {
       }
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
-        setIsAuthOpen(false);
+        setIsChooseUsernameOpen(false);
         setDetailGame(null);
       }
     };
@@ -263,7 +263,7 @@ function MainApp() {
         favoritesCount={favorites.length}
         onOpenSearch={() => setIsSearchOpen(true)}
         onSelectFavoritesTab={() => handleNavigate('favorites')}
-        onOpenAuthModal={() => setIsAuthOpen(true)}
+        onOpenChooseUsername={() => setIsChooseUsernameOpen(true)}
         onOpenProfileModal={(tab = 'overview') => {
           setSelectedGame(null);
           setIsAdminOpen(false);
@@ -289,7 +289,7 @@ function MainApp() {
         />
       ) : (
         /* CLEAN GAME-FIRST PLATFORM MAIN LAYOUT */
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
           {isAdminOpen ? (
             /* Admin Dashboard */
             <AdminDashboard
@@ -304,7 +304,7 @@ function MainApp() {
               onClose={() => setIsProfileOpen(false)}
               onSelectGame={handleSelectGame}
               initialTab={profileTab}
-              onOpenAuthModal={() => setIsAuthOpen(true)}
+              onOpenAuthModal={() => setIsChooseUsernameOpen(true)}
             />
           ) : currentView === 'categories' ? (
             /* Dedicated Categories Directory View & Category Game Listings */
@@ -407,7 +407,7 @@ function MainApp() {
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
                       {catalogGames.map(game => (
                         <GameCard
                           key={game.id}
@@ -456,7 +456,7 @@ function MainApp() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
                 {catalogGames.map(game => (
                   <GameCard
                     key={game.id}
@@ -483,7 +483,7 @@ function MainApp() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
                 {recentlyPlayedGames.map(game => (
                   <GameCard
                     key={game.id}
@@ -526,7 +526,7 @@ function MainApp() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
                   {catalogGames.map(game => (
                     <GameCard
                       key={game.id}
@@ -586,7 +586,7 @@ function MainApp() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
                   {trendingGames.map(game => (
                     <GameCard
                       key={game.id}
@@ -617,7 +617,7 @@ function MainApp() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
                   {popularGames.map(game => (
                     <GameCard
                       key={game.id}
@@ -711,19 +711,19 @@ function MainApp() {
         onSelectGame={handleSelectGame}
       />
 
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onAuthSuccess={() => {
-          setIsAuthOpen(false);
+      {/* Choose Username Modal */}
+      <ChooseUsernameModal
+        isOpen={isChooseUsernameOpen}
+        onClose={() => setIsChooseUsernameOpen(false)}
+        onSuccess={() => {
+          setIsChooseUsernameOpen(false);
         }}
       />
 
       {/* Clean Footer */}
       {!selectedGame && (
         <footer className="mt-auto border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <span className="font-display font-bold text-[#111827] text-sm">GAMENOVA</span>
               <span className="text-slate-400">• Free Browser Gaming</span>

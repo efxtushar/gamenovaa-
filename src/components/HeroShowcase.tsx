@@ -49,7 +49,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({
   };
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/50 shadow-md min-h-[340px] sm:min-h-[380px] md:min-h-[420px] flex flex-col justify-end">
+    <div className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/50 shadow-md min-h-[300px] sm:min-h-[380px] md:min-h-[420px] flex flex-col justify-end">
       {/* Background Cinematic Artwork */}
       <div className="absolute inset-0 overflow-hidden">
         <img
@@ -60,52 +60,52 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({
           referrerPolicy="no-referrer"
         />
         {/* Soft Modern Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent md:w-3/5" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/75 to-black/30 sm:to-transparent sm:w-3/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
       </div>
 
       {/* Hero Content Overlay */}
-      <div className="relative z-10 p-6 sm:p-8 md:p-10 max-w-xl flex flex-col items-start">
+      <div className="relative z-10 p-4 sm:p-8 md:p-10 pb-16 sm:pb-8 max-w-xl flex flex-col items-start">
         {/* Spotlight & Genre Badges */}
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="px-2.5 py-1 rounded-lg bg-[#6D28D9] text-white text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 sm:mb-3 flex-wrap">
+          <span className="px-2.5 py-1 rounded-lg bg-[#6D28D9] text-white text-[10px] sm:text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 shadow-sm">
             <Sparkles className="w-3 h-3" />
-            <span>Featured Game</span>
+            <span>Featured</span>
           </span>
-          <span className="px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-md text-white text-xs font-medium border border-white/20">
+          <span className="px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-md text-white text-[11px] sm:text-xs font-medium border border-white/20">
             {game.category}
           </span>
         </div>
 
         {/* Title */}
-        <h1 className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white tracking-tight leading-tight drop-shadow-sm">
+        <h1 className="font-display font-black text-xl sm:text-3xl md:text-4xl text-white tracking-tight leading-tight drop-shadow-sm">
           {game.title}
         </h1>
 
         {/* Description */}
-        <p className="mt-2 text-slate-200 text-xs sm:text-sm line-clamp-2 leading-relaxed">
+        <p className="mt-1.5 sm:mt-2 text-slate-200 text-xs sm:text-sm line-clamp-2 leading-relaxed max-w-md">
           {game.description}
         </p>
 
         {/* Rating and Badges */}
-        <div className="mt-3 flex items-center gap-3 text-xs text-slate-200">
-          <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/10">
+        <div className="mt-2.5 sm:mt-3 flex items-center gap-3 text-xs text-slate-200">
+          <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/10">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span className="font-bold text-white">{game.rating.toFixed(1)}</span>
-            <span className="text-slate-400">/ 5.0</span>
+            <span className="font-bold text-white text-xs">{game.rating.toFixed(1)}</span>
+            <span className="text-slate-400 text-[10px] sm:text-xs">/ 5.0</span>
           </div>
           <span className="text-slate-300 font-medium text-[11px] hidden sm:inline">Instant browser play • No download</span>
         </div>
 
         {/* Action Controls */}
-        <div className="mt-5 flex items-center gap-3">
+        <div className="mt-4 sm:mt-5 flex items-center gap-2.5 sm:gap-3">
           {/* PLAY NOW Button */}
           <button
             onClick={() => {
               sound.playClick();
               onSelectGame(game);
             }}
-            className="px-6 py-2.5 rounded-xl font-bold text-sm bg-[#6D28D9] hover:bg-[#5B21B6] text-white transition-all transform hover:scale-102 flex items-center gap-2 cursor-pointer shadow-lg shadow-purple-900/30"
+            className="px-5 sm:px-6 py-2.5 min-h-[42px] rounded-xl font-bold text-xs sm:text-sm bg-[#6D28D9] hover:bg-[#5B21B6] text-white transition-all transform hover:scale-102 flex items-center gap-2 cursor-pointer shadow-lg shadow-purple-900/30 touch-manipulation"
           >
             <Play className="w-4 h-4 fill-current" />
             <span>PLAY NOW</span>
@@ -116,7 +116,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({
             <button
               onClick={(e) => onToggleFavorite(game.id, e)}
               aria-label="Save to favorites"
-              className={`p-2.5 rounded-xl border backdrop-blur-md transition-colors cursor-pointer ${
+              className={`p-2.5 min-w-[42px] min-h-[42px] flex items-center justify-center rounded-xl border backdrop-blur-md transition-colors cursor-pointer touch-manipulation ${
                 isFavorite
                   ? 'bg-white text-rose-500 border-white shadow-sm'
                   : 'bg-white/15 border-white/20 text-white hover:bg-white/30'
@@ -129,11 +129,11 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({
       </div>
 
       {/* Carousel Navigation Arrows & Indicators */}
-      <div className="absolute right-4 bottom-4 md:right-8 md:bottom-8 flex items-center gap-2 z-20">
+      <div className="absolute right-3 bottom-3 sm:right-6 sm:bottom-6 md:right-8 md:bottom-8 flex items-center gap-1.5 sm:gap-2 z-20">
         <button
           onClick={handlePrev}
           aria-label="Previous featured game"
-          className="p-2 rounded-xl bg-black/40 hover:bg-black/70 backdrop-blur-md border border-white/20 text-white transition-colors cursor-pointer"
+          className="p-2 min-w-[34px] min-h-[34px] flex items-center justify-center rounded-xl bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white transition-colors cursor-pointer touch-manipulation"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -147,9 +147,9 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({
                 setCurrentIndex(i);
               }}
               aria-label={`Go to slide ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer touch-manipulation ${
                 i === safeIndex 
-                  ? 'w-5 bg-white' 
+                  ? 'w-4 sm:w-5 bg-white' 
                   : 'w-1.5 bg-white/40 hover:bg-white/70'
               }`}
             />
@@ -159,7 +159,7 @@ export const HeroShowcase: React.FC<HeroShowcaseProps> = ({
         <button
           onClick={handleNext}
           aria-label="Next featured game"
-          className="p-2 rounded-xl bg-black/40 hover:bg-black/70 backdrop-blur-md border border-white/20 text-white transition-colors cursor-pointer"
+          className="p-2 min-w-[34px] min-h-[34px] flex items-center justify-center rounded-xl bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white transition-colors cursor-pointer touch-manipulation"
         >
           <ChevronRight className="w-4 h-4" />
         </button>

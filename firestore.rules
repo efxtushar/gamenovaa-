@@ -2,83 +2,141 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuthenticated() {
+    // 1. Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Security & Identity primitives
+    function isSignedIn() {
       return request.auth != null;
     }
 
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.role == 'admin' ||
-         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      return isSignedIn() && (
+        request.auth.token.email == 'efxbro1237@gmail.com' ||
+        (request.auth.token.role == 'admin') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // 3. Validation Blueprints
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 50 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+             (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 1000)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 500)) &&
+             (!('role' in data) || data.role in ['user', 'moderator', 'admin']) &&
+             (!('level' in data) || (data.level is number && data.level >= 1)) &&
+             (!('xp' in data) || (data.xp is number && data.xp >= 0));
+    }
+
+    function isValidGameScore(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 50 &&
+             data.gameSlug is string && data.gameSlug.size() <= 100 &&
+             data.score is number && data.score >= 0 && data.score <= 100000000;
+    }
+
+    function isValidGameRating(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 50 &&
+             data.gameSlug is string && data.gameSlug.size() <= 100 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             (!('review' in data) || (data.review is string && data.review.size() <= 1000));
+    }
+
+    function isValidFavorite(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.gameId is string && data.gameId.size() <= 100;
+    }
+
+    function isValidRecentlyPlayed(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.gameSlug is string && data.gameSlug.size() <= 100;
+    }
+
+    function isValidCustomGame(data) {
+      return data.slug is string && data.slug.size() <= 100 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.category is string && data.category.size() <= 50;
+    }
+
+    function isValidUsernameMapping(data) {
+      return data.username is string && data.username.size() >= 1 && data.username.size() <= 50 &&
+             data.userId is string && data.userId.size() <= 128;
     }
 
     // Users collection: Public profiles, owner write
     match /users/{userId} {
       allow read: if true;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isValidId(userId) && (isOwner(userId) || isAdmin()) && isValidUserProfile(incoming());
+      allow delete: if isValidId(userId) && isAdmin();
     }
 
     // Usernames unique mapping collection
     match /usernames/{username} {
       allow read: if true;
-      allow create, update: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update: if isSignedIn() && incoming().userId == request.auth.uid && isValidUsernameMapping(incoming());
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
     // Favorites collection
     match /favorites/{favId} {
       allow read: if true;
-      allow create: if isAuthenticated() && 
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.gameId is string;
-      allow update, delete: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidFavorite(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidFavorite(incoming());
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
     // Scores / Leaderboards
     match /scores/{scoreId} {
       allow read: if true;
-      allow create: if isAuthenticated() && 
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.score is number &&
-        request.resource.data.score >= 0 &&
-        request.resource.data.score <= 10000000;
-      allow update, delete: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidGameScore(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidGameScore(incoming());
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
     // Ratings
     match /ratings/{ratingId} {
       allow read: if true;
-      allow create: if isAuthenticated() && 
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.rating is number &&
-        request.resource.data.rating >= 1 &&
-        request.resource.data.rating <= 5;
-      allow update, delete: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidGameRating(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidGameRating(incoming());
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
     // Recently played
     match /recently_played/{recentId} {
       allow read: if true;
-      allow create: if isAuthenticated() && 
-        request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidRecentlyPlayed(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidRecentlyPlayed(incoming());
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
-    // Custom games (Admin managed)
+    // Custom games (Admin managed, public read)
     match /custom_games/{gameId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isValidCustomGame(incoming());
+      allow delete: if isAdmin();
     }
 
     // Health check test doc
