@@ -4,145 +4,55 @@ import confetti from 'canvas-confetti';
 import {
   Play,
   RotateCcw,
-  Zap,
-  Shield,
+  Rocket,
+  Trophy,
+  Settings,
   Volume2,
   VolumeX,
-  Pause,
-  ArrowLeft,
-  Sparkles,
   Maximize2,
   Minimize2,
-  Settings,
   HelpCircle,
-  Crosshair as CrosshairIcon,
-  Flame,
-  Radio,
-  RefreshCw
+  Radio
 } from 'lucide-react';
+import {
+  GameModeState,
+  ShipConfig,
+  ShipId,
+  EnemyType,
+  Star,
+  NebulaCloud,
+  Planet,
+  Asteroid,
+  SpaceDebris,
+  Projectile,
+  Enemy,
+  Particle,
+  CrosshairState
+} from './galaxy-commander/types';
+import { PLAYABLE_SHIPS, drawPlayerShip, getShipConfig } from './galaxy-commander/ships';
+import { GalaxyHUD } from './galaxy-commander/GalaxyHUD';
+import { ShipSelectModal } from './galaxy-commander/ShipSelectModal';
+import { WaveClearModal } from './galaxy-commander/WaveClearModal';
+import { MissionsBriefingModal } from './galaxy-commander/MissionsBriefingModal';
 
 interface GameProps {
   onGameOver?: (score: number) => void;
   onBack?: () => void;
 }
 
-// -------------------------------------------------------------
-// TYPES & DATA STRUCTURES
-// -------------------------------------------------------------
-type EnemyType = 'scout' | 'fighter' | 'heavy' | 'elite';
-
-interface Star {
-  x: number;
-  y: number;
-  z: number; // depth: 1 (far, slow, tiny) to 3 (near, fast, bright)
-  size: number;
-  alpha: number;
-}
-
-interface NebulaCloud {
-  x: number;
-  y: number;
-  radius: number;
-  color: string;
-  speed: number;
-}
-
-interface Planet {
-  x: number;
-  y: number;
-  radius: number;
-  baseColor: string;
-  glowColor: string;
-  hasRing: boolean;
-  ringColor?: string;
-  speed: number;
-}
-
-interface Asteroid {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  rotation: number;
-  rotSpeed: number;
-  hp: number;
-  maxHp: number;
-  vertices: { x: number; y: number }[];
-}
-
-interface Projectile {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  damage: number;
-  color: string;
-  glowColor: string;
-  isPlayer: boolean;
-  life: number;
-  maxLife: number;
-  isEnergyBlast?: boolean;
-}
-
-interface Enemy {
-  id: string;
-  type: EnemyType;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  angle: number;
-  targetAngle: number;
-  hp: number;
-  maxHp: number;
-  shield?: number;
-  maxShield?: number;
-  speed: number;
-  shootCooldown: number;
-  shootInterval: number;
-  behaviorTimer: number;
-  hitFlash: number;
-  alive: boolean;
-  deathAnim: number; // 1 down to 0
-  radius: number;
-  color: string;
-  glowColor: string;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  color: string;
-  size: number;
-  alpha: number;
-  life: number;
-  maxLife: number;
-  type?: 'spark' | 'plasma' | 'smoke' | 'debris' | 'shockwave';
-}
-
-interface FloatingText {
-  id: number;
-  x: number;
-  y: number;
-  text: string;
-  color: string;
-  alpha: number;
-  life: number;
-  maxLife: number;
-}
-
 export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // High level game state
-  const [gameState, setGameState] = useState<'START' | 'PLAYING' | 'PAUSED' | 'GAMEOVER'>('START');
-  const [showHowToPlay, setShowHowToPlay] = useState(false);
+  // Active Ship Selection (Persisted in localStorage)
+  const [selectedShipId, setSelectedShipId] = useState<ShipId>(() => {
+    return (localStorage.getItem('gamenova_gc_selected_ship') as ShipId) || 'valkyrie';
+  });
+  const currentShip = getShipConfig(selectedShipId);
+
+  // High-Level Game State
+  const [gameState, setGameState] = useState<GameModeState>('START');
+  const [showMissionsModal, setShowMissionsModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   // Settings
@@ -154,15 +64,18 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
   // Gameplay HUD state
   const [score, setScore] = useState(0);
   const [kills, setKills] = useState(0);
+  const [shotsFired, setShotsFired] = useState(0);
+  const [shotsHit, setShotsHit] = useState(0);
   const [wave, setWave] = useState(1);
   const [activeHostiles, setActiveHostiles] = useState(0);
   const [health, setHealth] = useState(100);
+  const [maxHealth, setMaxHealth] = useState(100);
   const [shield, setShield] = useState(100);
+  const [maxShield, setMaxShield] = useState(100);
   const [ammo, setAmmo] = useState(24);
-  const [maxAmmo] = useState(24);
+  const [maxAmmo, setMaxAmmo] = useState(24);
   const [isReloading, setIsReloading] = useState(false);
-  const [energyBlastCooldown, setEnergyBlastCooldown] = useState(0); // 0 = ready, >0 = cooldown frames
-  const [isLockedOn, setIsLockedOn] = useState(false);
+  const [energyBlastCooldown, setEnergyBlastCooldown] = useState(0);
   const [waveBanner, setWaveBanner] = useState<string | null>(null);
   const [highScore, setHighScore] = useState(() => {
     return parseInt(localStorage.getItem('gamenova_hs_galaxy_commander') || '0', 10);
@@ -176,7 +89,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
   const joystickTouchIdRef = useRef<number | null>(null);
   const isMobileFiringRef = useRef(false);
 
-  // Audio Context for Ambient Space Synth Music
+  // Ambient Space Synth Audio Context
   const musicOscRef = useRef<{
     ctx: AudioContext | null;
     osc1: OscillatorNode | null;
@@ -184,19 +97,19 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     gainNode: GainNode | null;
   }>({ ctx: null, osc1: null, osc2: null, gainNode: null });
 
-  // Core Simulation Ref
+  // Core Simulation State
   const simRef = useRef({
     time: 0,
     width: 1280,
     height: 720,
     screenShake: 0,
-    // Player ship
+    ship: currentShip,
     player: {
       x: 640,
       y: 520,
       vx: 0,
       vy: 0,
-      angle: -Math.PI / 2, // Facing upwards
+      angle: -Math.PI / 2,
       bankAngle: 0,
       hp: 100,
       maxHp: 100,
@@ -207,21 +120,21 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
       maxAmmo: 24,
       isReloading: false,
       reloadTimer: 0,
-      maxReloadTime: 90, // ~1.5s
+      maxReloadTime: 85,
       shootCooldown: 0,
       energyBlastCooldown: 0,
-      maxBlastCooldown: 300, // 5s
+      maxBlastCooldown: 300,
       isBlasting: false,
       blastRadius: 0,
-      hitFlash: 0
+      hitFlash: 0,
+      muzzleFlashTimer: 0
     },
-    // Crosshair / Aim
     crosshair: {
       x: 640,
-      y: 300,
-      isLockedOn: false
-    },
-    // Keys
+      y: 320,
+      isLockedOn: false,
+      hitMarkerTimer: 0
+    } as CrosshairState,
     keys: {
       up: false,
       down: false,
@@ -229,20 +142,19 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
       right: false,
       fire: false
     },
-    // Waves & Progression
     wave: 1,
     waveSpawned: 0,
-    waveTargetKills: 3, // Wave 1 has only 3 enemies - beginner friendly!
+    waveTargetKills: 3,
     spawnCooldown: 40,
     score: 0,
     kills: 0,
-    // Entities
+    shotsFired: 0,
+    shotsHit: 0,
     enemies: [] as Enemy[],
     projectiles: [] as Projectile[],
     particles: [] as Particle[],
     asteroids: [] as Asteroid[],
-    floatingTexts: [] as FloatingText[],
-    // Background
+    spaceDebris: [] as SpaceDebris[],
     stars: [] as Star[],
     nebulas: [] as NebulaCloud[],
     planets: [] as Planet[],
@@ -250,19 +162,14 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     nextEnemyId: 1
   });
 
-  // Check Touchscreen
+  // Detect Touch Capability
   useEffect(() => {
-    const checkTouch = () => {
-      setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    };
-    checkTouch();
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
   }, []);
 
-  // Listen to Fullscreen changes
+  // Monitor Fullscreen
   useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
@@ -276,23 +183,22 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     }
   }, []);
 
-  // Ambient Space Synth Music Generator (Web Audio API)
+  // Ambient Space Synth Music
   const startSpaceMusic = useCallback(() => {
     if (!musicEnabled || sound.getIsMuted()) return;
     try {
       if (!musicOscRef.current.ctx) {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         if (AudioCtx) {
           musicOscRef.current.ctx = new AudioCtx();
         }
       }
       const ctx = musicOscRef.current.ctx;
       if (!ctx) return;
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
+      if (ctx.state === 'suspended') ctx.resume();
 
-      // Stop previous
       if (musicOscRef.current.osc1) {
         try {
           musicOscRef.current.osc1.stop();
@@ -300,21 +206,20 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
         } catch {}
       }
 
-      // Create warm low sci-fi drone
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
       const gain = ctx.createGain();
       const filter = ctx.createBiquadFilter();
 
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(55, ctx.currentTime); // A1 note
+      osc1.frequency.setValueAtTime(55, ctx.currentTime); // Deep A1
       osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(110, ctx.currentTime); // A2 note
+      osc2.frequency.setValueAtTime(110, ctx.currentTime); // Low A2
 
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(320, ctx.currentTime);
 
-      gain.gain.setValueAtTime(0.045, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
 
       osc1.connect(filter);
       osc2.connect(filter);
@@ -345,166 +250,196 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     } else {
       stopSpaceMusic();
     }
-    return () => {
-      stopSpaceMusic();
-    };
+    return () => stopSpaceMusic();
   }, [gameState, musicEnabled, startSpaceMusic, stopSpaceMusic]);
 
-  // Initialize Space Environment (Stars, Nebulas, Planets, Asteroids)
+  // Procedural Deep-Space Environment Generator (4-layer Parallax Stars, Nebulae, Planets, Asteroids, Debris)
   const initSpaceEnvironment = useCallback((w: number, h: number, q: 'LOW' | 'MEDIUM' | 'HIGH') => {
-    const starCount = q === 'HIGH' ? 140 : q === 'MEDIUM' ? 90 : 50;
+    const starCount = q === 'HIGH' ? 160 : q === 'MEDIUM' ? 100 : 60;
     const stars: Star[] = [];
     for (let i = 0; i < starCount; i++) {
-      const z = Math.random() < 0.6 ? 1 : Math.random() < 0.85 ? 2 : 3;
+      const z = Math.random() < 0.5 ? 1 : Math.random() < 0.8 ? 2 : Math.random() < 0.95 ? 3 : 4;
+      const size = z === 4 ? 2.6 : z === 3 ? 1.9 : z === 2 ? 1.3 : 0.8;
+      const color =
+        z === 4 ? '#ffffff' : z === 3 ? '#bae6fd' : z === 2 ? '#38bdf8' : '#7dd3fc';
       stars.push({
         x: Math.random() * w,
         y: Math.random() * h,
         z,
-        size: z === 3 ? 1.8 + Math.random() * 1.2 : z === 2 ? 1.2 + Math.random() * 0.8 : 0.8 + Math.random() * 0.6,
-        alpha: z === 3 ? 0.8 + Math.random() * 0.2 : z === 2 ? 0.5 + Math.random() * 0.3 : 0.3 + Math.random() * 0.2
+        size: size + Math.random() * 0.4,
+        alpha: 0.3 + Math.random() * 0.7,
+        twinkleSpeed: 0.02 + Math.random() * 0.05,
+        twinklePhase: Math.random() * Math.PI * 2,
+        color
       });
     }
 
+    // Rich Volumetric Nebulae (Cyan, Violet, Magenta)
     const nebulas: NebulaCloud[] = [
-      { x: w * 0.25, y: h * 0.3, radius: 240, color: 'rgba(56, 189, 248, 0.08)', speed: 0.15 },
-      { x: w * 0.75, y: h * 0.4, radius: 280, color: 'rgba(168, 85, 247, 0.09)', speed: 0.12 },
-      { x: w * 0.5, y: h * 0.8, radius: 260, color: 'rgba(236, 72, 153, 0.07)', speed: 0.18 }
+      { x: w * 0.2, y: h * 0.25, radius: 280, color: 'rgba(56, 189, 248, 0.08)', speed: 0.12 },
+      { x: w * 0.78, y: h * 0.38, radius: 320, color: 'rgba(168, 85, 247, 0.09)', speed: 0.10 },
+      { x: w * 0.45, y: h * 0.82, radius: 300, color: 'rgba(236, 72, 153, 0.07)', speed: 0.15 },
+      { x: w * 0.85, y: h * 0.9, radius: 250, color: 'rgba(99, 102, 241, 0.07)', speed: 0.14 }
     ];
 
+    // Distant Planets (Gas Giant with Ring + Volcanic/Ice Moon)
     const planets: Planet[] = [
       {
-        x: w * 0.85,
-        y: h * 0.25,
-        radius: 46,
+        x: w * 0.82,
+        y: h * 0.22,
+        radius: 54,
         baseColor: '#0284c7',
         glowColor: '#38bdf8',
         hasRing: true,
-        ringColor: 'rgba(56, 189, 248, 0.4)',
-        speed: 0.05
+        ringColor: 'rgba(56, 189, 248, 0.45)',
+        hasBands: true,
+        speed: 0.04
       },
       {
-        x: w * 0.15,
-        y: h * 0.75,
-        radius: 28,
-        baseColor: '#7c3aed',
-        glowColor: '#c084fc',
+        x: w * 0.14,
+        y: h * 0.72,
+        radius: 32,
+        baseColor: '#6d28d9',
+        glowColor: '#a855f7',
         hasRing: false,
-        speed: 0.03
+        speed: 0.025
       }
     ];
 
-    // Asteroids drifting in background
+    // Drifting Asteroids with polygon craters
     const asteroids: Asteroid[] = [];
-    const numAst = q === 'HIGH' ? 6 : 4;
+    const numAst = q === 'HIGH' ? 7 : 4;
     for (let i = 0; i < numAst; i++) {
-      const radius = 18 + Math.random() * 26;
-      const numPts = 7 + Math.floor(Math.random() * 4);
+      const radius = 22 + Math.random() * 26;
+      const numPts = 8 + Math.floor(Math.random() * 4);
       const vertices = [];
       for (let p = 0; p < numPts; p++) {
         const angle = (p / numPts) * Math.PI * 2;
-        const rad = radius * (0.8 + Math.random() * 0.4);
+        const rad = radius * (0.75 + Math.random() * 0.45);
         vertices.push({ x: Math.cos(angle) * rad, y: Math.sin(angle) * rad });
       }
+
+      // Procedural surface craters
+      const craters = [];
+      const numCraters = 2 + Math.floor(Math.random() * 3);
+      for (let c = 0; c < numCraters; c++) {
+        craters.push({
+          x: (Math.random() - 0.5) * radius * 0.8,
+          y: (Math.random() - 0.5) * radius * 0.8,
+          r: 3 + Math.random() * 6
+        });
+      }
+
       asteroids.push({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
+        vx: (Math.random() - 0.5) * 0.45,
         vy: 0.2 + Math.random() * 0.4,
         radius,
         rotation: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 0.015,
-        hp: 35,
-        maxHp: 35,
-        vertices
+        hp: 45,
+        maxHp: 45,
+        color: '#1e293b',
+        vertices,
+        craters
       });
     }
 
-    return { stars, nebulas, planets, asteroids };
+    // Space Debris (Hull fragments, solar panel fragments drifting)
+    const spaceDebris: SpaceDebris[] = [];
+    for (let i = 0; i < 12; i++) {
+      spaceDebris.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: 0.4 + Math.random() * 0.5,
+        size: 2 + Math.random() * 3.5,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.02,
+        color: Math.random() < 0.6 ? '#64748b' : '#38bdf8',
+        alpha: 0.4 + Math.random() * 0.4
+      });
+    }
+
+    return { stars, nebulas, planets, asteroids, spaceDebris };
   }, []);
 
-  // Fire Plasma Cannon (Left Mouse / Fire Button)
+  // Primary Weapon Firing
   const fireWeapon = useCallback(() => {
     const s = simRef.current;
     const p = s.player;
+    const ship = s.ship;
+
     if (p.isReloading || p.shootCooldown > 0 || p.ammo <= 0) {
-      if (p.ammo <= 0 && !p.isReloading) {
-        // Trigger automatic reload when empty
-        triggerReload();
-      }
+      if (p.ammo <= 0 && !p.isReloading) triggerReload();
       return;
     }
 
     p.ammo--;
     setAmmo(p.ammo);
-    p.shootCooldown = 11; // Smooth rapid fire rate
+    p.shootCooldown = ship.fireRateCooldown;
+    p.muzzleFlashTimer = 4;
+    s.shotsFired++;
+    setShotsFired(s.shotsFired);
+
     if (soundEnabled) sound.playLaser(1100);
+    s.screenShake = 2.2;
 
-    // Muzzle flash / recoil
-    s.screenShake = 2.5;
-
-    // Calculate aim angle towards crosshair
+    // Aim angle towards crosshair
     const dx = s.crosshair.x - p.x;
     const dy = s.crosshair.y - p.y;
     const aimAngle = Math.atan2(dy, dx);
-
-    // Twin cannon offsets
     const perpAngle = aimAngle + Math.PI / 2;
-    const offset = 14;
 
-    const leftX = p.x + Math.cos(perpAngle) * offset + Math.cos(aimAngle) * 16;
-    const leftY = p.y + Math.sin(perpAngle) * offset + Math.sin(aimAngle) * 16;
-    const rightX = p.x - Math.cos(perpAngle) * offset + Math.cos(aimAngle) * 16;
-    const rightY = p.y - Math.sin(perpAngle) * offset + Math.sin(aimAngle) * 16;
-
-    const projSpeed = 16;
+    const projSpeed = ship.bulletSpeed;
     const pVx = Math.cos(aimAngle) * projSpeed;
     const pVy = Math.sin(aimAngle) * projSpeed;
 
-    // Fire two high-energy plasma bolts
-    [
-      { x: leftX, y: leftY },
-      { x: rightX, y: rightY }
-    ].forEach(origin => {
+    // Fire from each cannon mount defined on the active spacecraft
+    ship.cannons.forEach(cPos => {
+      const boltX = p.x + Math.cos(perpAngle) * cPos.x + Math.cos(aimAngle) * (18 + cPos.y);
+      const boltY = p.y + Math.sin(perpAngle) * cPos.x + Math.sin(aimAngle) * (18 + cPos.y);
+
       s.projectiles.push({
         id: s.nextProjId++,
-        x: origin.x,
-        y: origin.y,
+        x: boltX,
+        y: boltY,
         vx: pVx,
         vy: pVy,
-        radius: 4,
-        damage: 18,
-        color: '#00f0ff',
-        glowColor: '#38bdf8',
+        radius: ship.bulletRadius,
+        damage: ship.bulletDamage,
+        color: ship.bulletColor,
+        glowColor: ship.bulletGlow,
         isPlayer: true,
-        life: 55,
-        maxLife: 55
+        life: 60,
+        maxLife: 60,
+        length: 18
       });
 
       // Muzzle sparks
       for (let m = 0; m < 3; m++) {
-        const sparkAngle = aimAngle + (Math.random() - 0.5) * 0.8;
+        const spAngle = aimAngle + (Math.random() - 0.5) * 0.6;
         const spd = 2 + Math.random() * 4;
         s.particles.push({
-          x: origin.x,
-          y: origin.y,
-          vx: Math.cos(sparkAngle) * spd,
-          vy: Math.sin(sparkAngle) * spd,
-          color: '#00f0ff',
+          x: boltX,
+          y: boltY,
+          vx: Math.cos(spAngle) * spd,
+          vy: Math.sin(spAngle) * spd,
+          color: ship.bulletColor,
           size: 2,
           alpha: 1,
-          life: 10,
-          maxLife: 10,
+          life: 9,
+          maxLife: 9,
           type: 'spark'
         });
       }
     });
 
-    if (p.ammo <= 0) {
-      triggerReload();
-    }
+    if (p.ammo <= 0) triggerReload();
   }, [soundEnabled]);
 
-  // Reload Plasma Cannon
+  // Magazine Reload Trigger
   const triggerReload = useCallback(() => {
     const s = simRef.current;
     const p = s.player;
@@ -516,7 +451,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     if (soundEnabled) sound.playClick();
   }, [soundEnabled]);
 
-  // Special Ability: ENERGY BLAST
+  // Special Ability: EMP ENERGY BLAST (SPACE Bar)
   const fireEnergyBlast = useCallback(() => {
     const s = simRef.current;
     const p = s.player;
@@ -527,143 +462,159 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     setEnergyBlastCooldown(p.maxBlastCooldown);
     p.isBlasting = true;
     p.blastRadius = 15;
-    s.screenShake = 7;
+    s.screenShake = 8;
 
-    // Spawn massive shockwave ring
+    // Expanding shockwave projectile
     s.projectiles.push({
       id: s.nextProjId++,
       x: p.x,
       y: p.y,
       vx: 0,
       vy: 0,
-      radius: 20,
-      damage: 75,
+      radius: 24,
+      damage: 85,
       color: '#c084fc',
       glowColor: '#a855f7',
       isPlayer: true,
-      life: 40,
-      maxLife: 40,
+      life: 45,
+      maxLife: 45,
       isEnergyBlast: true
     });
 
-    // Radial plasma particles
-    for (let i = 0; i < 32; i++) {
-      const angle = (i / 32) * Math.PI * 2;
-      const spd = 6 + Math.random() * 5;
+    // Radial shockwave particles
+    for (let i = 0; i < 36; i++) {
+      const angle = (i / 36) * Math.PI * 2;
+      const spd = 6 + Math.random() * 6;
       s.particles.push({
         x: p.x,
         y: p.y,
         vx: Math.cos(angle) * spd,
         vy: Math.sin(angle) * spd,
         color: Math.random() < 0.5 ? '#c084fc' : '#38bdf8',
-        size: 3.5,
+        size: 4,
         alpha: 1,
-        life: 25,
-        maxLife: 25,
+        life: 28,
+        maxLife: 28,
         type: 'shockwave'
       });
     }
 
-    // Damage and push back all enemies currently on screen
+    // Damage, push back, and disrupt hostile projectiles
+    s.projectiles = s.projectiles.filter(pr => pr.isPlayer);
+
     s.enemies.forEach(e => {
       if (!e.alive) return;
       const dx = e.x - p.x;
       const dy = e.y - p.y;
       const dist = Math.hypot(dx, dy);
-      if (dist < 340) {
-        e.hp -= 65;
-        e.hitFlash = 12;
+      if (dist < 380) {
+        e.hp -= 80;
+        e.hitFlash = 14;
         const pushAngle = Math.atan2(dy, dx);
-        e.vx += Math.cos(pushAngle) * 8;
-        e.vy += Math.sin(pushAngle) * 8;
+        e.vx += Math.cos(pushAngle) * 9;
+        e.vy += Math.sin(pushAngle) * 9;
       }
     });
   }, [soundEnabled]);
 
-  // Start New Game Session
-  const startGame = useCallback(() => {
-    sound.playClick();
-    const canvas = canvasRef.current;
-    const w = canvas ? canvas.width : 1280;
-    const h = canvas ? canvas.height : 720;
-    const env = initSpaceEnvironment(w, h, quality);
+  // Start New Mission Run
+  const startMission = useCallback(
+    (initialWave = 1, currentScore = 0, currentKills = 0) => {
+      sound.playClick();
+      const canvas = canvasRef.current;
+      const w = canvas ? canvas.width : 1280;
+      const h = canvas ? canvas.height : 720;
+      const env = initSpaceEnvironment(w, h, quality);
+      const ship = getShipConfig(selectedShipId);
 
-    simRef.current = {
-      time: 0,
-      width: w,
-      height: h,
-      screenShake: 0,
-      player: {
-        x: w / 2,
-        y: h * 0.75,
-        vx: 0,
-        vy: 0,
-        angle: -Math.PI / 2,
-        bankAngle: 0,
-        hp: 100,
-        maxHp: 100,
-        shield: 100,
-        maxShield: 100,
-        shieldRechargeTimer: 0,
-        ammo: 24,
-        maxAmmo: 24,
-        isReloading: false,
-        reloadTimer: 0,
-        maxReloadTime: 90,
-        shootCooldown: 0,
-        energyBlastCooldown: 0,
-        maxBlastCooldown: 300,
-        isBlasting: false,
-        blastRadius: 0,
-        hitFlash: 0
-      },
-      crosshair: {
-        x: w / 2,
-        y: h * 0.35,
-        isLockedOn: false
-      },
-      keys: {
-        up: false,
-        down: false,
-        left: false,
-        right: false,
-        fire: false
-      },
-      wave: 1,
-      waveSpawned: 0,
-      waveTargetKills: 3, // Wave 1: exactly 3 easy scouts!
-      spawnCooldown: 40,
-      score: 0,
-      kills: 0,
-      enemies: [],
-      projectiles: [],
-      particles: [],
-      asteroids: env.asteroids,
-      floatingTexts: [],
-      stars: env.stars,
-      nebulas: env.nebulas,
-      planets: env.planets,
-      nextProjId: 1,
-      nextEnemyId: 1
-    };
+      // Target kills scale gradually
+      const targetKills = initialWave === 1 ? 3 : initialWave === 2 ? 5 : 4 + initialWave * 2;
 
-    setScore(0);
-    setKills(0);
-    setWave(1);
-    setActiveHostiles(0);
-    setHealth(100);
-    setShield(100);
-    setAmmo(24);
-    setIsReloading(false);
-    setEnergyBlastCooldown(0);
-    setIsLockedOn(false);
+      simRef.current = {
+        time: 0,
+        width: w,
+        height: h,
+        screenShake: 0,
+        ship,
+        player: {
+          x: w / 2,
+          y: h * 0.78,
+          vx: 0,
+          vy: 0,
+          angle: -Math.PI / 2,
+          bankAngle: 0,
+          hp: ship.baseHp,
+          maxHp: ship.baseHp,
+          shield: ship.baseShield,
+          maxShield: ship.baseShield,
+          shieldRechargeTimer: 0,
+          ammo: ship.ammoCapacity,
+          maxAmmo: ship.ammoCapacity,
+          isReloading: false,
+          reloadTimer: 0,
+          maxReloadTime: 85,
+          shootCooldown: 0,
+          energyBlastCooldown: 0,
+          maxBlastCooldown: 300,
+          isBlasting: false,
+          blastRadius: 0,
+          hitFlash: 0,
+          muzzleFlashTimer: 0
+        },
+        crosshair: {
+          x: w / 2,
+          y: h * 0.35,
+          isLockedOn: false,
+          hitMarkerTimer: 0
+        },
+        keys: {
+          up: false,
+          down: false,
+          left: false,
+          right: false,
+          fire: false
+        },
+        wave: initialWave,
+        waveSpawned: 0,
+        waveTargetKills: targetKills,
+        spawnCooldown: 40,
+        score: currentScore,
+        kills: currentKills,
+        shotsFired: 0,
+        shotsHit: 0,
+        enemies: [],
+        projectiles: [],
+        particles: [],
+        asteroids: env.asteroids,
+        spaceDebris: env.spaceDebris,
+        stars: env.stars,
+        nebulas: env.nebulas,
+        planets: env.planets,
+        nextProjId: 1,
+        nextEnemyId: 1
+      };
 
-    setWaveBanner('WAVE 01 // HOSTILES INCOMING');
-    setTimeout(() => setWaveBanner(null), 3000);
-    setGameState('PLAYING');
-  }, [initSpaceEnvironment, quality]);
+      setScore(currentScore);
+      setKills(currentKills);
+      setWave(initialWave);
+      setActiveHostiles(targetKills);
+      setHealth(ship.baseHp);
+      setMaxHealth(ship.baseHp);
+      setShield(ship.baseShield);
+      setMaxShield(ship.baseShield);
+      setAmmo(ship.ammoCapacity);
+      setMaxAmmo(ship.ammoCapacity);
+      setIsReloading(false);
+      setEnergyBlastCooldown(0);
 
-  // Handle Game Over
+      setWaveBanner(`WAVE ${initialWave.toString().padStart(2, '0')} // HOSTILES INCOMING`);
+      setTimeout(() => setWaveBanner(null), 3200);
+      setGameState('PLAYING');
+    },
+    [initSpaceEnvironment, quality, selectedShipId]
+  );
+
+  // Handle Mission Failure / Game Over
   const handleGameOver = useCallback(
     (finalScore: number) => {
       if (soundEnabled) sound.playGameOver();
@@ -677,6 +628,14 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     },
     [highScore, onGameOver, soundEnabled]
   );
+
+  // Handle Ship Select Confirmation
+  const handleSelectShip = useCallback((ship: ShipConfig) => {
+    setSelectedShipId(ship.id);
+    localStorage.setItem('gamenova_gc_selected_ship', ship.id);
+    simRef.current.ship = ship;
+    setGameState('START');
+  }, []);
 
   // Keyboard Controls Listener
   useEffect(() => {
@@ -712,29 +671,24 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     };
   }, [fireEnergyBlast, triggerReload]);
 
-  // Mouse Movement & Firing on Canvas
+  // Mouse Input Listeners
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const mx = (e.clientX - rect.left);
-    const my = (e.clientY - rect.top);
-
-    const s = simRef.current;
-    s.crosshair.x = mx;
-    s.crosshair.y = my;
+    simRef.current.crosshair.x = e.clientX - rect.left;
+    simRef.current.crosshair.y = e.clientY - rect.top;
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button === 0) {
-      simRef.current.keys.fire = true;
-      fireWeapon();
-    } else if (e.button === 2) {
-      e.preventDefault();
-      fireEnergyBlast();
-    }
-  }, [fireWeapon, fireEnergyBlast]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (e.button === 0) {
+        simRef.current.keys.fire = true;
+        fireWeapon();
+      }
+    },
+    [fireWeapon]
+  );
 
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button === 0) {
@@ -746,54 +700,33 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
   const handleJoystickTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     e.preventDefault();
     const touch = e.changedTouches[0];
-    if (!touch) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
     joystickTouchIdRef.current = touch.identifier;
-    joystickOriginRef.current = { x: centerX, y: centerY };
-
-    const dx = touch.clientX - centerX;
-    const dy = touch.clientY - centerY;
-    const maxDist = 38;
-    const dist = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
-    const clampedDist = Math.min(maxDist, dist);
-    const jx = Math.cos(angle) * clampedDist;
-    const jy = Math.sin(angle) * clampedDist;
-
-    setJoystickPos({ x: jx, y: jy, active: true });
-
-    const s = simRef.current;
-    s.keys.left = jx < -8;
-    s.keys.right = jx > 8;
-    s.keys.up = jy < -8;
-    s.keys.down = jy > 8;
+    joystickOriginRef.current = { x: touch.clientX, y: touch.clientY };
+    setJoystickPos({ x: 0, y: 0, active: true });
   }, []);
 
   const handleJoystickTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (joystickTouchIdRef.current === null) return;
     for (let i = 0; i < e.changedTouches.length; i++) {
       const touch = e.changedTouches[i];
       if (touch.identifier === joystickTouchIdRef.current) {
-        const origin = joystickOriginRef.current;
-        const dx = touch.clientX - origin.x;
-        const dy = touch.clientY - origin.y;
-        const maxDist = 38;
+        const dx = touch.clientX - joystickOriginRef.current.x;
+        const dy = touch.clientY - joystickOriginRef.current.y;
         const dist = Math.hypot(dx, dy);
+        const maxRadius = 38;
+        const clampedDist = Math.min(dist, maxRadius);
         const angle = Math.atan2(dy, dx);
-        const clampedDist = Math.min(maxDist, dist);
         const jx = Math.cos(angle) * clampedDist;
         const jy = Math.sin(angle) * clampedDist;
 
         setJoystickPos({ x: jx, y: jy, active: true });
 
         const s = simRef.current;
-        s.keys.left = jx < -8;
-        s.keys.right = jx > 8;
-        s.keys.up = jy < -8;
-        s.keys.down = jy > 8;
+        const deadZone = 10;
+        s.keys.left = jx < -deadZone;
+        s.keys.right = jx > deadZone;
+        s.keys.up = jy < -deadZone;
+        s.keys.down = jy > deadZone;
         break;
       }
     }
@@ -815,22 +748,22 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     }
   }, []);
 
-  // Main Simulation & Rendering Loop
+  // Main Simulation & Rendering Loop (Runs for both START cinematic menu and PLAYING)
   useEffect(() => {
-    if (gameState !== 'PLAYING') return;
-
     let animId: number;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Handle high-DPI resize
     const resizeCanvas = () => {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
+      if (
+        canvas.width !== Math.floor(rect.width * dpr) ||
+        canvas.height !== Math.floor(rect.height * dpr)
+      ) {
         canvas.width = Math.floor(rect.width * dpr);
         canvas.height = Math.floor(rect.height * dpr);
         simRef.current.width = rect.width;
@@ -840,473 +773,546 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    // Initial background environment if empty
+    if (simRef.current.stars.length === 0) {
+      const rect = canvas.getBoundingClientRect();
+      const env = initSpaceEnvironment(rect.width || 1280, rect.height || 720, quality);
+      simRef.current.stars = env.stars;
+      simRef.current.nebulas = env.nebulas;
+      simRef.current.planets = env.planets;
+      simRef.current.asteroids = env.asteroids;
+      simRef.current.spaceDebris = env.spaceDebris;
+    }
+
     const gameLoop = () => {
       const s = simRef.current;
       const p = s.player;
+      const ship = s.ship;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const viewW = s.width;
-      const viewH = s.height;
+      const viewW = s.width || 1280;
+      const viewH = s.height || 720;
 
       s.time += 0.016;
 
       // -------------------------------------------------------------
-      // 1. UPDATE PLAYER PHYSICS & MOVEMENT
+      // 1. UPDATE PHYSICS & MOVEMENT (ONLY IN PLAYING)
       // -------------------------------------------------------------
-      const speedMultiplier = sensitivity === 'HIGH' ? 6.8 : sensitivity === 'LOW' ? 4.8 : 5.8;
+      if (gameState === 'PLAYING') {
+        const speedMult =
+          sensitivity === 'HIGH' ? ship.speed * 1.15 : sensitivity === 'LOW' ? ship.speed * 0.85 : ship.speed;
 
-      let moveX = 0;
-      let moveY = 0;
-      if (s.keys.left) moveX -= 1;
-      if (s.keys.right) moveX += 1;
-      if (s.keys.up) moveY -= 1;
-      if (s.keys.down) moveY += 1;
+        let moveX = 0;
+        let moveY = 0;
+        if (s.keys.left) moveX -= 1;
+        if (s.keys.right) moveX += 1;
+        if (s.keys.up) moveY -= 1;
+        if (s.keys.down) moveY += 1;
 
-      // Normalize diagonal speed
-      if (moveX !== 0 && moveY !== 0) {
-        moveX *= 0.7071;
-        moveY *= 0.7071;
-      }
-
-      // Smooth inertia
-      p.vx += (moveX * speedMultiplier - p.vx) * 0.18;
-      p.vy += (moveY * speedMultiplier - p.vy) * 0.18;
-
-      p.x += p.vx;
-      p.y += p.vy;
-
-      // Banking angle based on horizontal movement
-      const targetBank = (p.vx / speedMultiplier) * 0.28;
-      p.bankAngle += (targetBank - p.bankAngle) * 0.15;
-
-      // Arena boundaries (keep player securely on screen)
-      const margin = 36;
-      p.x = Math.max(margin, Math.min(viewW - margin, p.x));
-      p.y = Math.max(margin, Math.min(viewH - margin, p.y));
-
-      // Engine thruster particle trail
-      if (Math.random() < 0.8) {
-        s.particles.push({
-          x: p.x - Math.sin(p.bankAngle) * 8 + (Math.random() - 0.5) * 8,
-          y: p.y + 24 + Math.random() * 4,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: 3 + Math.random() * 4,
-          color: Math.random() < 0.6 ? '#00f0ff' : '#38bdf8',
-          size: 2.5 + Math.random() * 2,
-          alpha: 0.9,
-          life: 16,
-          maxLife: 16,
-          type: 'plasma'
-        });
-      }
-
-      // Continuous firing while held (desktop or mobile)
-      if ((s.keys.fire || isMobileFiringRef.current) && p.shootCooldown <= 0) {
-        fireWeapon();
-      }
-
-      // Weapon Cooldown & Reloading
-      if (p.shootCooldown > 0) p.shootCooldown--;
-      if (p.isReloading) {
-        p.reloadTimer--;
-        if (p.reloadTimer <= 0) {
-          p.isReloading = false;
-          p.ammo = p.maxAmmo;
-          setIsReloading(false);
-          setAmmo(p.maxAmmo);
-          if (soundEnabled) sound.playLaser(1400);
+        if (moveX !== 0 && moveY !== 0) {
+          moveX *= 0.7071;
+          moveY *= 0.7071;
         }
-      }
 
-      // Energy Blast Cooldown
-      if (p.energyBlastCooldown > 0) {
-        p.energyBlastCooldown--;
-        if (p.energyBlastCooldown % 15 === 0 || p.energyBlastCooldown === 0) {
-          setEnergyBlastCooldown(p.energyBlastCooldown);
-        }
-      }
+        // Inertia interpolation
+        p.vx += (moveX * speedMult - p.vx) * ship.turnSpeed;
+        p.vy += (moveY * speedMult - p.vy) * ship.turnSpeed;
 
-      // Shield Passive Regeneration (starts recharging after 120 frames without taking hit)
-      p.shieldRechargeTimer++;
-      if (p.shieldRechargeTimer > 120 && p.shield < p.maxShield) {
-        p.shield = Math.min(p.maxShield, p.shield + 0.35);
-        setShield(Math.floor(p.shield));
-      }
+        p.x += p.vx;
+        p.y += p.vy;
 
-      if (p.hitFlash > 0) p.hitFlash--;
+        // Banking rotation based on horizontal velocity
+        const targetBank = (p.vx / speedMult) * 0.32;
+        p.bankAngle += (targetBank - p.bankAngle) * 0.16;
 
-      // -------------------------------------------------------------
-      // 2. CROSSHAIR & ENEMY TARGET LOCK DETECTION
-      // -------------------------------------------------------------
-      let lockedOnAny = false;
-      for (const e of s.enemies) {
-        if (!e.alive) continue;
-        const distToCross = Math.hypot(e.x - s.crosshair.x, e.y - s.crosshair.y);
-        if (distToCross < e.radius + 18) {
-          lockedOnAny = true;
-          break;
-        }
-      }
-      s.crosshair.isLockedOn = lockedOnAny;
-      setIsLockedOn(lockedOnAny);
+        // Arena Boundaries
+        const margin = 36;
+        p.x = Math.max(margin, Math.min(viewW - margin, p.x));
+        p.y = Math.max(margin, Math.min(viewH - margin, p.y));
 
-      // -------------------------------------------------------------
-      // 3. WAVES & PROGRESSIVE ENEMY SPAWNER
-      // -------------------------------------------------------------
-      const livingEnemies = s.enemies.filter(e => e.alive).length;
-      setActiveHostiles(livingEnemies);
-
-      // Wave Clear Check
-      if (s.waveSpawned >= s.waveTargetKills && livingEnemies === 0) {
-        s.wave++;
-        s.waveSpawned = 0;
-        // Gradual scaling: Wave 1: 3, Wave 2: 4, Wave 3: 6, Wave 4: 8, Wave 5: 10
-        s.waveTargetKills = Math.min(16, 2 + s.wave * 2);
-        s.spawnCooldown = 90; // Generous intermission
-        setWave(s.wave);
-
-        // System repair rewards on wave clear
-        p.shield = p.maxShield;
-        p.hp = Math.min(p.maxHp, p.hp + 20);
-        p.ammo = p.maxAmmo;
-        setShield(p.shield);
-        setHealth(p.hp);
-        setAmmo(p.ammo);
-
-        setWaveBanner(`WAVE 0${s.wave} // SYSTEMS RESTORED`);
-        setTimeout(() => setWaveBanner(null), 3000);
-      }
-
-      // Spawn individual enemies smoothly
-      if (s.waveSpawned < s.waveTargetKills) {
-        s.spawnCooldown--;
-        // Early wave spawn intervals are very relaxed (every 140+ frames = 2.5s)
-        const spawnDelay = Math.max(65, 140 - s.wave * 8);
-
-        // Max concurrent enemies allowed on screen scales gently: Wave 1: 2, Wave 2: 3, Wave 3: 4
-        const maxConcurrent = Math.min(6, 2 + Math.floor(s.wave / 2));
-
-        if (s.spawnCooldown <= 0 && livingEnemies < maxConcurrent) {
-          s.spawnCooldown = spawnDelay;
-          s.waveSpawned++;
-
-          // Determine enemy archetype based on current wave progression
-          let eType: EnemyType = 'scout';
-          const r = Math.random();
-          if (s.wave >= 4 && r < 0.2) {
-            eType = 'elite';
-          } else if (s.wave >= 3 && r < 0.35) {
-            eType = 'heavy';
-          } else if (s.wave >= 2 && r < 0.5) {
-            eType = 'fighter';
-          } else {
-            eType = 'scout';
-          }
-
-          // Enemy stats tuned for beginner-friendly start
-          const maxHp = eType === 'heavy' ? 110 : eType === 'elite' ? 65 : eType === 'fighter' ? 42 : 20;
-          const speed =
-            eType === 'scout'
-              ? 1.6 + Math.min(0.8, s.wave * 0.05)
-              : eType === 'fighter'
-              ? 1.3
-              : eType === 'elite'
-              ? 1.8
-              : 0.9;
-
-          const shootInterval = eType === 'scout' ? 160 : eType === 'heavy' ? 120 : eType === 'elite' ? 85 : 100;
-
-          s.enemies.push({
-            id: `en_${s.nextEnemyId++}`,
-            type: eType,
-            x: 80 + Math.random() * (viewW - 160),
-            y: -50, // Spawn just above top screen
+        // Engine Thruster Particle Trails
+        if (Math.random() < 0.85) {
+          const trailColor = Math.random() < 0.6 ? ship.glowColor : '#ffffff';
+          s.particles.push({
+            x: p.x - Math.sin(p.bankAngle) * 8 + (Math.random() - 0.5) * 8,
+            y: p.y + 24 + Math.random() * 4,
             vx: (Math.random() - 0.5) * 1.5,
-            vy: speed,
-            angle: Math.PI / 2, // Facing downwards
-            targetAngle: Math.PI / 2,
-            hp: maxHp,
-            maxHp,
-            shield: eType === 'elite' ? 30 : 0,
-            maxShield: eType === 'elite' ? 30 : 0,
-            speed,
-            shootCooldown: Math.floor(Math.random() * 60) + 40,
-            shootInterval,
-            behaviorTimer: 0,
-            hitFlash: 0,
-            alive: true,
-            deathAnim: 1,
-            radius: eType === 'heavy' ? 32 : eType === 'elite' ? 24 : eType === 'fighter' ? 22 : 16,
-            color: eType === 'heavy' ? '#a855f7' : eType === 'elite' ? '#f43f5e' : eType === 'fighter' ? '#f59e0b' : '#38bdf8',
-            glowColor: eType === 'heavy' ? '#c084fc' : eType === 'elite' ? '#fb7185' : eType === 'fighter' ? '#fbbf24' : '#00f0ff'
+            vy: 3.5 + Math.random() * 4,
+            color: trailColor,
+            size: 2.5 + Math.random() * 2,
+            alpha: 0.9,
+            life: 16,
+            maxLife: 16,
+            type: 'plasma'
           });
         }
-      }
 
-      // -------------------------------------------------------------
-      // 4. UPDATE ENEMY AI & COMBAT PATTERNS
-      // -------------------------------------------------------------
-      for (let i = s.enemies.length - 1; i >= 0; i--) {
-        const e = s.enemies[i];
-        if (!e.alive) {
-          e.deathAnim -= 0.06;
-          if (e.deathAnim <= 0) {
-            s.enemies.splice(i, 1);
-          }
-          continue;
+        // Rapid Fire while holding LMB or Mobile Fire Button
+        if ((s.keys.fire || isMobileFiringRef.current) && p.shootCooldown <= 0) {
+          fireWeapon();
         }
 
-        if (e.hitFlash > 0) e.hitFlash--;
-        e.behaviorTimer += 0.03;
+        if (p.shootCooldown > 0) p.shootCooldown--;
+        if (p.muzzleFlashTimer > 0) p.muzzleFlashTimer--;
 
-        // Custom archetype navigation
-        if (e.type === 'scout') {
-          // Fast strafing in weave patterns
-          e.vy = e.speed;
-          e.vx = Math.sin(e.behaviorTimer * 2 + e.y * 0.01) * 2.2;
-          e.y += e.vy;
-          e.x += e.vx;
-          if (e.y > viewH + 40) e.y = -30; // Loop back from top
-        } else if (e.type === 'fighter') {
-          // Moves down to mid screen and circles/strafes
-          if (e.y < viewH * 0.35) {
-            e.y += e.speed;
-          } else {
-            e.x += Math.sin(e.behaviorTimer * 1.5) * 2.4;
-            e.y += Math.cos(e.behaviorTimer * 0.8) * 0.8;
+        // Reload Timer
+        if (p.isReloading) {
+          p.reloadTimer--;
+          if (p.reloadTimer <= 0) {
+            p.isReloading = false;
+            p.ammo = p.maxAmmo;
+            setIsReloading(false);
+            setAmmo(p.maxAmmo);
+            if (soundEnabled) sound.playLaser(1400);
           }
-        } else if (e.type === 'heavy') {
-          // Slow ponderous battleship
-          if (e.y < viewH * 0.28) {
-            e.y += e.speed * 0.7;
-          } else {
-            e.x += Math.sin(e.behaviorTimer * 0.8) * 1.2;
-          }
-        } else if (e.type === 'elite') {
-          // Advanced evasive strafing
-          const dxToPlayer = p.x - e.x;
-          e.vx += (Math.sign(dxToPlayer) * 1.5 - e.vx) * 0.1;
-          e.x += e.vx;
-          e.y += Math.sin(e.behaviorTimer * 2) * 1.4;
-          if (e.y < 120) e.y += 1.2;
         }
 
-        // Clamp inside horizontal bounds
-        e.x = Math.max(e.radius + 15, Math.min(viewW - e.radius - 15, e.x));
+        // Energy Blast Cooldown
+        if (p.energyBlastCooldown > 0) {
+          p.energyBlastCooldown--;
+          if (p.energyBlastCooldown % 15 === 0 || p.energyBlastCooldown === 0) {
+            setEnergyBlastCooldown(p.energyBlastCooldown);
+          }
+        }
 
-        // Enemy Shooting Logic
-        e.shootCooldown--;
-        if (e.shootCooldown <= 0 && e.y > 40 && e.y < viewH * 0.65) {
-          e.shootCooldown = e.shootInterval;
+        // Passive Shield Regeneration
+        p.shieldRechargeTimer++;
+        if (p.shieldRechargeTimer > 120 && p.shield < p.maxShield) {
+          p.shield = Math.min(p.maxShield, p.shield + 0.35);
+          setShield(Math.floor(p.shield));
+        }
 
-          const dx = p.x - e.x;
-          const dy = p.y - e.y;
-          const angleToPlayer = Math.atan2(dy, dx);
-          const enemyBulletSpeed = e.type === 'elite' ? 5.5 : 4.2;
+        if (p.hitFlash > 0) p.hitFlash--;
+        if (s.crosshair.hitMarkerTimer > 0) s.crosshair.hitMarkerTimer--;
 
-          if (e.type === 'heavy') {
-            // Triple spread salvo
-            [-0.25, 0, 0.25].forEach(angOff => {
-              const finalAngle = angleToPlayer + angOff;
+        // Target Lock On Hover
+        let lockedOnAny = false;
+        for (const e of s.enemies) {
+          if (!e.alive) continue;
+          const distToCross = Math.hypot(e.x - s.crosshair.x, e.y - s.crosshair.y);
+          if (distToCross < e.radius + 20) {
+            lockedOnAny = true;
+            break;
+          }
+        }
+        s.crosshair.isLockedOn = lockedOnAny;
+
+        // -------------------------------------------------------------
+        // 2. WAVE PROGRESSION & PROGRESSIVE ENEMY SPAWNER
+        // -------------------------------------------------------------
+        const livingEnemies = s.enemies.filter(e => e.alive).length;
+        const totalRemaining = s.waveTargetKills - s.kills;
+        setActiveHostiles(Math.max(0, totalRemaining));
+
+        // Wave Cleared Check -> Show WaveClearModal
+        if (s.waveSpawned >= s.waveTargetKills && livingEnemies === 0) {
+          const waveReward = s.wave * 500;
+          s.score += waveReward;
+          setScore(s.score);
+          confetti({ particleCount: 80, spread: 70, origin: { y: 0.5 } });
+          setGameState('WAVE_CLEAR');
+        }
+
+        // Smooth progressive spawning
+        if (s.waveSpawned < s.waveTargetKills) {
+          s.spawnCooldown--;
+          const spawnDelay = Math.max(65, 130 - s.wave * 7);
+          const maxConcurrent = Math.min(6, 2 + Math.floor(s.wave / 2));
+
+          if (s.spawnCooldown <= 0 && livingEnemies < maxConcurrent) {
+            s.spawnCooldown = spawnDelay;
+            s.waveSpawned++;
+
+            // Wave-based archetype progression
+            let eType: EnemyType = 'scout';
+            const r = Math.random();
+            if (s.wave >= 4 && r < 0.25) {
+              eType = 'elite';
+            } else if (s.wave >= 3 && r < 0.4) {
+              eType = 'heavy';
+            } else if (s.wave >= 2 && r < 0.55) {
+              eType = 'fighter';
+            } else {
+              eType = 'scout';
+            }
+
+            const maxHp =
+              eType === 'heavy' ? 120 : eType === 'elite' ? 70 : eType === 'fighter' ? 44 : 22;
+            const speed =
+              eType === 'scout'
+                ? 1.7 + Math.min(0.8, s.wave * 0.05)
+                : eType === 'fighter'
+                ? 1.35
+                : eType === 'elite'
+                ? 1.85
+                : 0.95;
+
+            const shootInterval =
+              eType === 'scout' ? 150 : eType === 'heavy' ? 115 : eType === 'elite' ? 80 : 100;
+
+            s.enemies.push({
+              id: `en_${s.nextEnemyId++}`,
+              type: eType,
+              x: 80 + Math.random() * (viewW - 160),
+              y: -50,
+              vx: (Math.random() - 0.5) * 1.5,
+              vy: speed,
+              angle: Math.PI / 2,
+              targetAngle: Math.PI / 2,
+              hp: maxHp,
+              maxHp,
+              shield: eType === 'elite' ? 35 : 0,
+              maxShield: eType === 'elite' ? 35 : 0,
+              speed,
+              shootCooldown: Math.floor(Math.random() * 60) + 40,
+              shootInterval,
+              behaviorTimer: 0,
+              hitFlash: 0,
+              alive: true,
+              deathAnim: 1,
+              radius: eType === 'heavy' ? 32 : eType === 'elite' ? 24 : eType === 'fighter' ? 22 : 16,
+              color:
+                eType === 'heavy'
+                  ? '#a855f7'
+                  : eType === 'elite'
+                  ? '#f43f5e'
+                  : eType === 'fighter'
+                  ? '#f59e0b'
+                  : '#00f0ff',
+              glowColor:
+                eType === 'heavy'
+                  ? '#c084fc'
+                  : eType === 'elite'
+                  ? '#fb7185'
+                  : eType === 'fighter'
+                  ? '#fbbf24'
+                  : '#38bdf8'
+            });
+          }
+        }
+
+        // -------------------------------------------------------------
+        // 3. UPDATE ENEMY AI & COMBAT PATTERNS
+        // -------------------------------------------------------------
+        for (let i = s.enemies.length - 1; i >= 0; i--) {
+          const e = s.enemies[i];
+          if (!e.alive) {
+            e.deathAnim -= 0.06;
+            if (e.deathAnim <= 0) s.enemies.splice(i, 1);
+            continue;
+          }
+
+          if (e.hitFlash > 0) e.hitFlash--;
+          e.behaviorTimer += 0.03;
+
+          // Unique flight behavior per enemy type
+          if (e.type === 'scout') {
+            e.vy = e.speed;
+            e.vx = Math.sin(e.behaviorTimer * 2.2 + e.y * 0.01) * 2.4;
+            e.y += e.vy;
+            e.x += e.vx;
+            if (e.y > viewH + 40) e.y = -30;
+          } else if (e.type === 'fighter') {
+            if (e.y < viewH * 0.35) {
+              e.y += e.speed;
+            } else {
+              e.x += Math.sin(e.behaviorTimer * 1.6) * 2.5;
+              e.y += Math.cos(e.behaviorTimer * 0.8) * 0.8;
+            }
+          } else if (e.type === 'heavy') {
+            if (e.y < viewH * 0.26) {
+              e.y += e.speed * 0.7;
+            } else {
+              e.x += Math.sin(e.behaviorTimer * 0.7) * 1.3;
+            }
+          } else if (e.type === 'elite') {
+            const dxToPlayer = p.x - e.x;
+            e.vx += (Math.sign(dxToPlayer) * 1.6 - e.vx) * 0.1;
+            e.x += e.vx;
+            e.y += Math.sin(e.behaviorTimer * 2.2) * 1.5;
+            if (e.y < 120) e.y += 1.2;
+          }
+
+          e.x = Math.max(e.radius + 15, Math.min(viewW - e.radius - 15, e.x));
+
+          // Enemy Shooting
+          e.shootCooldown--;
+          if (e.shootCooldown <= 0 && e.y > 40 && e.y < viewH * 0.65) {
+            e.shootCooldown = e.shootInterval;
+            const dx = p.x - e.x;
+            const dy = p.y - e.y;
+            const angleToPlayer = Math.atan2(dy, dx);
+            const enemyBulletSpeed = e.type === 'elite' ? 5.8 : 4.4;
+
+            if (e.type === 'heavy') {
+              // Triple spread salvo
+              [-0.24, 0, 0.24].forEach(angOff => {
+                const finalAngle = angleToPlayer + angOff;
+                s.projectiles.push({
+                  id: s.nextProjId++,
+                  x: e.x,
+                  y: e.y + e.radius,
+                  vx: Math.cos(finalAngle) * enemyBulletSpeed,
+                  vy: Math.sin(finalAngle) * enemyBulletSpeed,
+                  radius: 4.5,
+                  damage: 16,
+                  color: '#ef4444',
+                  glowColor: '#f97316',
+                  isPlayer: false,
+                  life: 140,
+                  maxLife: 140
+                });
+              });
+            } else if (e.type === 'fighter') {
+              // Twin plasma bolts
+              [-10, 10].forEach(xOff => {
+                s.projectiles.push({
+                  id: s.nextProjId++,
+                  x: e.x + xOff,
+                  y: e.y + e.radius,
+                  vx: Math.cos(angleToPlayer) * enemyBulletSpeed,
+                  vy: Math.sin(angleToPlayer) * enemyBulletSpeed,
+                  radius: 3.5,
+                  damage: 13,
+                  color: '#f59e0b',
+                  glowColor: '#fbbf24',
+                  isPlayer: false,
+                  life: 120,
+                  maxLife: 120
+                });
+              });
+            } else {
+              // Directed fast laser
               s.projectiles.push({
                 id: s.nextProjId++,
                 x: e.x,
                 y: e.y + e.radius,
-                vx: Math.cos(finalAngle) * enemyBulletSpeed,
-                vy: Math.sin(finalAngle) * enemyBulletSpeed,
-                radius: 4.5,
-                damage: 15,
-                color: '#ef4444',
-                glowColor: '#f97316',
-                isPlayer: false,
-                life: 140,
-                maxLife: 140
-              });
-            });
-          } else if (e.type === 'fighter') {
-            // Twin plasma bolt
-            [-10, 10].forEach(xOff => {
-              s.projectiles.push({
-                id: s.nextProjId++,
-                x: e.x + xOff,
-                y: e.y + e.radius,
                 vx: Math.cos(angleToPlayer) * enemyBulletSpeed,
                 vy: Math.sin(angleToPlayer) * enemyBulletSpeed,
-                radius: 3.5,
-                damage: 12,
-                color: '#f59e0b',
-                glowColor: '#fbbf24',
+                radius: 3,
+                damage: 10,
+                color: '#38bdf8',
+                glowColor: '#00f0ff',
                 isPlayer: false,
                 life: 120,
                 maxLife: 120
               });
-            });
-          } else {
-            // Single directed laser bolt
-            s.projectiles.push({
-              id: s.nextProjId++,
-              x: e.x,
-              y: e.y + e.radius,
-              vx: Math.cos(angleToPlayer) * enemyBulletSpeed,
-              vy: Math.sin(angleToPlayer) * enemyBulletSpeed,
-              radius: 3,
-              damage: 9,
-              color: '#38bdf8',
-              glowColor: '#00f0ff',
-              isPlayer: false,
-              life: 120,
-              maxLife: 120
-            });
+            }
           }
         }
-      }
 
-      // -------------------------------------------------------------
-      // 5. UPDATE PROJECTILES & COLLISION DETECTION
-      // -------------------------------------------------------------
-      for (let i = s.projectiles.length - 1; i >= 0; i--) {
-        const pr = s.projectiles[i];
-        pr.x += pr.vx;
-        pr.y += pr.vy;
-        pr.life--;
+        // -------------------------------------------------------------
+        // 4. UPDATE PROJECTILES & COLLISION DETECTION
+        // -------------------------------------------------------------
+        for (let i = s.projectiles.length - 1; i >= 0; i--) {
+          const pr = s.projectiles[i];
+          pr.x += pr.vx;
+          pr.y += pr.vy;
+          pr.life--;
 
-        // Remove offscreen or dead projectiles
-        if (pr.life <= 0 || pr.x < -40 || pr.x > viewW + 40 || pr.y < -40 || pr.y > viewH + 40) {
-          s.projectiles.splice(i, 1);
-          continue;
-        }
+          if (
+            pr.life <= 0 ||
+            pr.x < -40 ||
+            pr.x > viewW + 40 ||
+            pr.y < -40 ||
+            pr.y > viewH + 40
+          ) {
+            s.projectiles.splice(i, 1);
+            continue;
+          }
 
-        // PLAYER PROJECTILE HITTING ENEMY
-        if (pr.isPlayer) {
-          for (let eIdx = 0; eIdx < s.enemies.length; eIdx++) {
-            const e = s.enemies[eIdx];
-            if (!e.alive) continue;
+          // PLAYER PROJECTILE HITTING ENEMY
+          if (pr.isPlayer) {
+            // Check collision with Asteroids first
+            for (let aIdx = 0; aIdx < s.asteroids.length; aIdx++) {
+              const ast = s.asteroids[aIdx];
+              const distToAst = Math.hypot(ast.x - pr.x, ast.y - pr.y);
+              if (distToAst < ast.radius + pr.radius) {
+                ast.hp -= pr.damage;
+                if (!pr.isEnergyBlast) s.projectiles.splice(i, 1);
 
-            const dist = Math.hypot(e.x - pr.x, e.y - pr.y);
-            if (dist < e.radius + pr.radius + 4) {
-              // Apply damage
-              if (e.shield && e.shield > 0) {
-                e.shield -= pr.damage;
-                if (e.shield < 0) {
-                  e.hp += e.shield;
-                  e.shield = 0;
+                // Asteroid hit sparks
+                for (let sp = 0; sp < 4; sp++) {
+                  const spAngle = Math.random() * Math.PI * 2;
+                  s.particles.push({
+                    x: pr.x,
+                    y: pr.y,
+                    vx: Math.cos(spAngle) * 3,
+                    vy: Math.sin(spAngle) * 3,
+                    color: '#94a3b8',
+                    size: 2,
+                    alpha: 1,
+                    life: 10,
+                    maxLife: 10,
+                    type: 'spark'
+                  });
                 }
+
+                if (ast.hp <= 0) {
+                  // Asteroid shattered!
+                  if (soundEnabled) sound.playExplosion();
+                  for (let f = 0; f < 10; f++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    s.particles.push({
+                      x: ast.x,
+                      y: ast.y,
+                      vx: Math.cos(ang) * 3.5,
+                      vy: Math.sin(ang) * 3.5,
+                      color: '#475569',
+                      size: 3,
+                      alpha: 1,
+                      life: 18,
+                      maxLife: 18,
+                      type: 'debris'
+                    });
+                  }
+                  // Respawn asteroid above screen
+                  ast.hp = ast.maxHp;
+                  ast.y = -ast.radius - 20;
+                  ast.x = Math.random() * viewW;
+                }
+                break;
+              }
+            }
+
+            // Check collision with Enemies
+            for (let eIdx = 0; eIdx < s.enemies.length; eIdx++) {
+              const e = s.enemies[eIdx];
+              if (!e.alive) continue;
+
+              const dist = Math.hypot(e.x - pr.x, e.y - pr.y);
+              if (dist < e.radius + pr.radius + 4) {
+                // Register hit
+                s.shotsHit++;
+                setShotsHit(s.shotsHit);
+                s.crosshair.hitMarkerTimer = 8; // Display hit marker feedback!
+
+                if (e.shield && e.shield > 0) {
+                  e.shield -= pr.damage;
+                  if (e.shield < 0) {
+                    e.hp += e.shield;
+                    e.shield = 0;
+                  }
+                } else {
+                  e.hp -= pr.damage;
+                }
+
+                e.hitFlash = 6;
+                if (soundEnabled) sound.playHit();
+
+                // Kinetic hit sparks
+                for (let sp = 0; sp < 6; sp++) {
+                  const spAngle = Math.random() * Math.PI * 2;
+                  const spSpeed = 2 + Math.random() * 4;
+                  s.particles.push({
+                    x: pr.x,
+                    y: pr.y,
+                    vx: Math.cos(spAngle) * spSpeed,
+                    vy: Math.sin(spAngle) * spSpeed,
+                    color: pr.color,
+                    size: 2,
+                    alpha: 1,
+                    life: 12,
+                    maxLife: 12,
+                    type: 'spark'
+                  });
+                }
+
+                if (!pr.isEnergyBlast) {
+                  s.projectiles.splice(i, 1);
+                }
+
+                // Enemy Defeated
+                if (e.hp <= 0) {
+                  e.alive = false;
+                  e.deathAnim = 1;
+                  s.kills++;
+                  setKills(s.kills);
+                  if (soundEnabled) sound.playExplosion();
+
+                  const killPoints =
+                    e.type === 'heavy'
+                      ? 360
+                      : e.type === 'elite'
+                      ? 300
+                      : e.type === 'fighter'
+                      ? 180
+                      : 100;
+                  s.score += killPoints;
+                  setScore(s.score);
+                  s.screenShake = e.type === 'heavy' ? 6.5 : e.type === 'elite' ? 5 : 3.5;
+
+                  // Multi-Phase Explosion Particles
+                  for (let d = 0; d < (e.type === 'heavy' ? 26 : 16); d++) {
+                    const dAngle = Math.random() * Math.PI * 2;
+                    const dSpd = 1.5 + Math.random() * 6;
+                    s.particles.push({
+                      x: e.x,
+                      y: e.y,
+                      vx: Math.cos(dAngle) * dSpd,
+                      vy: Math.sin(dAngle) * dSpd,
+                      color: Math.random() < 0.6 ? e.color : '#ffffff',
+                      size: 2.5 + Math.random() * 3.5,
+                      alpha: 1,
+                      life: 24,
+                      maxLife: 24,
+                      type: 'debris'
+                    });
+                  }
+                }
+                break;
+              }
+            }
+          } else {
+            // ENEMY PROJECTILE HITTING PLAYER
+            const distToPlayer = Math.hypot(p.x - pr.x, p.y - pr.y);
+            if (distToPlayer < 24 + pr.radius) {
+              s.projectiles.splice(i, 1);
+              p.hitFlash = 10;
+              p.shieldRechargeTimer = 0;
+              s.screenShake = 5.5;
+
+              if (p.shield > 0) {
+                p.shield -= pr.damage;
+                if (p.shield < 0) {
+                  p.hp += p.shield;
+                  p.shield = 0;
+                }
+                setShield(Math.max(0, Math.floor(p.shield)));
+                if (soundEnabled) sound.playHit();
               } else {
-                e.hp -= pr.damage;
+                p.hp = Math.max(0, p.hp - pr.damage);
+                setHealth(Math.floor(p.hp));
+                if (soundEnabled) sound.playHit();
               }
 
-              e.hitFlash = 6;
-              if (soundEnabled) sound.playHit();
-
-              // Impact kinetic sparks
-              for (let sp = 0; sp < 6; sp++) {
-                const spAngle = Math.random() * Math.PI * 2;
-                const spSpeed = 2 + Math.random() * 4;
+              // Impact ripples on player shield / hull
+              for (let sh = 0; sh < 10; sh++) {
+                const ang = Math.random() * Math.PI * 2;
                 s.particles.push({
                   x: pr.x,
                   y: pr.y,
-                  vx: Math.cos(spAngle) * spSpeed,
-                  vy: Math.sin(spAngle) * spSpeed,
-                  color: pr.color,
-                  size: 2,
+                  vx: Math.cos(ang) * 3,
+                  vy: Math.sin(ang) * 3,
+                  color: p.shield > 0 ? ship.glowColor : '#ef4444',
+                  size: 2.5,
                   alpha: 1,
-                  life: 12,
-                  maxLife: 12,
-                  type: 'spark'
+                  life: 14,
+                  maxLife: 14,
+                  type: 'plasma'
                 });
               }
 
-              // Non-energy blasts terminate on impact
-              if (!pr.isEnergyBlast) {
-                s.projectiles.splice(i, 1);
+              if (p.hp <= 0) {
+                handleGameOver(s.score);
+                return;
               }
-
-              // Enemy Defeated
-              if (e.hp <= 0) {
-                e.alive = false;
-                e.deathAnim = 1;
-                s.kills++;
-                setKills(s.kills);
-                if (soundEnabled) sound.playExplosion();
-
-                const killPoints = e.type === 'heavy' ? 350 : e.type === 'elite' ? 280 : e.type === 'fighter' ? 180 : 100;
-                s.score += killPoints;
-                setScore(s.score);
-
-                // Small screen shake on defeat
-                s.screenShake = e.type === 'heavy' ? 6 : 3;
-
-                // Destruction explosion debris & shockwave
-                for (let d = 0; d < (e.type === 'heavy' ? 24 : 14); d++) {
-                  const dAngle = Math.random() * Math.PI * 2;
-                  const dSpd = 1.5 + Math.random() * 5.5;
-                  s.particles.push({
-                    x: e.x,
-                    y: e.y,
-                    vx: Math.cos(dAngle) * dSpd,
-                    vy: Math.sin(dAngle) * dSpd,
-                    color: Math.random() < 0.6 ? e.color : '#ffffff',
-                    size: 2.5 + Math.random() * 3,
-                    alpha: 1,
-                    life: 22,
-                    maxLife: 22,
-                    type: 'debris'
-                  });
-                }
-              }
-              break;
-            }
-          }
-        } else {
-          // ENEMY PROJECTILE HITTING PLAYER
-          const distToPlayer = Math.hypot(p.x - pr.x, p.y - pr.y);
-          if (distToPlayer < 24 + pr.radius) {
-            s.projectiles.splice(i, 1);
-            p.hitFlash = 10;
-            p.shieldRechargeTimer = 0; // Reset shield regen delay
-            s.screenShake = 5;
-
-            // Shield absorbs damage first
-            if (p.shield > 0) {
-              p.shield -= pr.damage;
-              if (p.shield < 0) {
-                p.hp += p.shield;
-                p.shield = 0;
-              }
-              setShield(Math.max(0, Math.floor(p.shield)));
-              if (soundEnabled) sound.playHit();
-            } else {
-              p.hp = Math.max(0, p.hp - pr.damage);
-              setHealth(Math.floor(p.hp));
-              if (soundEnabled) sound.playHit();
-            }
-
-            // Shield / Hull impact ring
-            for (let sh = 0; sh < 10; sh++) {
-              const ang = Math.random() * Math.PI * 2;
-              s.particles.push({
-                x: pr.x,
-                y: pr.y,
-                vx: Math.cos(ang) * 3,
-                vy: Math.sin(ang) * 3,
-                color: p.shield > 0 ? '#38bdf8' : '#ef4444',
-                size: 2.5,
-                alpha: 1,
-                life: 14,
-                maxLife: 14,
-                type: 'plasma'
-              });
-            }
-
-            if (p.hp <= 0) {
-              handleGameOver(s.score);
-              return;
             }
           }
         }
       }
 
       // -------------------------------------------------------------
-      // 6. UPDATE PARTICLES & ASTEROIDS
+      // 5. UPDATE BACKGROUND & PARTICLES (BOTH START & PLAYING)
       // -------------------------------------------------------------
       for (let i = s.particles.length - 1; i >= 0; i--) {
         const pt = s.particles[i];
@@ -1317,7 +1323,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
         if (pt.life <= 0) s.particles.splice(i, 1);
       }
 
-      // Asteroids drift in space
+      // Asteroid Drifting
       s.asteroids.forEach(ast => {
         ast.x += ast.vx;
         ast.y += ast.vy;
@@ -1328,9 +1334,22 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
         }
       });
 
-      // Stars scroll slowly downward to give sense of cruising forward
+      // Space Debris Drifting
+      s.spaceDebris.forEach(deb => {
+        deb.x += deb.vx;
+        deb.y += deb.vy;
+        deb.rotation += deb.rotSpeed;
+        if (deb.y > viewH + 20) {
+          deb.y = -10;
+          deb.x = Math.random() * viewW;
+        }
+      });
+
+      // 4-Layer Starfield Scroll with Depth Parallax
       s.stars.forEach(st => {
         st.y += st.z * 0.45;
+        st.twinklePhase += st.twinkleSpeed;
+        st.alpha = 0.4 + Math.sin(st.twinklePhase) * 0.35;
         if (st.y > viewH) {
           st.y = -5;
           st.x = Math.random() * viewW;
@@ -1338,26 +1357,29 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
       });
 
       // -------------------------------------------------------------
-      // 7. HIGH-END PROCEDURAL SPACE RENDERING PIPELINE
+      // 6. HIGH-END PROCEDURAL CANVAS RENDERING PIPELINE
       // -------------------------------------------------------------
       ctx.save();
       ctx.scale(dpr, dpr);
 
       // Camera Shake
       if (s.screenShake > 0) {
-        ctx.translate((Math.random() - 0.5) * s.screenShake * 2, (Math.random() - 0.5) * s.screenShake * 2);
-        s.screenShake = Math.max(0, s.screenShake - 0.4);
+        ctx.translate(
+          (Math.random() - 0.5) * s.screenShake * 2,
+          (Math.random() - 0.5) * s.screenShake * 2
+        );
+        s.screenShake = Math.max(0, s.screenShake - 0.35);
       }
 
-      // 7A. Deep Space Void Background
+      // 6A. Deep Navy Space Background
       const spaceGrad = ctx.createLinearGradient(0, 0, 0, viewH);
       spaceGrad.addColorStop(0, '#030712');
-      spaceGrad.addColorStop(0.5, '#080d1a');
-      spaceGrad.addColorStop(1, '#050a14');
+      spaceGrad.addColorStop(0.5, '#070d1e');
+      spaceGrad.addColorStop(1, '#050914');
       ctx.fillStyle = spaceGrad;
       ctx.fillRect(0, 0, viewW, viewH);
 
-      // 7B. Glowing Nebulas
+      // 6B. Volumetric Glowing Nebulae
       s.nebulas.forEach(n => {
         const nGrad = ctx.createRadialGradient(n.x, n.y, 10, n.x, n.y, n.radius);
         nGrad.addColorStop(0, n.color);
@@ -1368,30 +1390,57 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
         ctx.fill();
       });
 
-      // 7C. Distant Planets
+      // 6C. Distant Planets
       s.planets.forEach(pl => {
-        // Base planet body
+        ctx.save();
         ctx.fillStyle = pl.baseColor;
         ctx.shadowColor = pl.glowColor;
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 20;
         ctx.beginPath();
         ctx.arc(pl.x, pl.y, pl.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Planetary Ring
+        // Planetary Atmosphere Bands
+        if (pl.hasBands) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(pl.x, pl.y, pl.radius * 0.95, pl.radius * 0.25, 0.2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Dark Shadow Terminator (Crescent 3D sphere illusion)
+        const darkGrad = ctx.createRadialGradient(
+          pl.x + pl.radius * 0.4,
+          pl.y - pl.radius * 0.4,
+          pl.radius * 0.3,
+          pl.x,
+          pl.y,
+          pl.radius
+        );
+        darkGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        darkGrad.addColorStop(0.8, 'rgba(3,7,18,0.7)');
+        darkGrad.addColorStop(1, 'rgba(3,7,18,0.95)');
+        ctx.fillStyle = darkGrad;
+        ctx.beginPath();
+        ctx.arc(pl.x, pl.y, pl.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Planetary Ring System
         if (pl.hasRing && pl.ringColor) {
           ctx.strokeStyle = pl.ringColor;
           ctx.lineWidth = 4;
           ctx.beginPath();
-          ctx.ellipse(pl.x, pl.y, pl.radius * 1.8, pl.radius * 0.45, -0.3, 0, Math.PI * 2);
+          ctx.ellipse(pl.x, pl.y, pl.radius * 1.9, pl.radius * 0.45, -0.28, 0, Math.PI * 2);
           ctx.stroke();
         }
+        ctx.restore();
       });
 
-      // 7D. Multi-layered Starfield
+      // 6D. Multi-Layer Parallax Starfield
       s.stars.forEach(st => {
-        ctx.fillStyle = st.z === 3 ? '#e0f2fe' : st.z === 2 ? '#bae6fd' : '#7dd3fc';
+        ctx.fillStyle = st.color;
         ctx.globalAlpha = st.alpha;
         ctx.beginPath();
         ctx.arc(st.x, st.y, st.size, 0, Math.PI * 2);
@@ -1399,12 +1448,26 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
       });
       ctx.globalAlpha = 1.0;
 
-      // 7E. Drifting Asteroids
+      // 6E. Space Debris
+      s.spaceDebris.forEach(deb => {
+        ctx.save();
+        ctx.translate(deb.x, deb.y);
+        ctx.rotate(deb.rotation);
+        ctx.fillStyle = deb.color;
+        ctx.globalAlpha = deb.alpha;
+        ctx.fillRect(-deb.size / 2, -deb.size / 2, deb.size, deb.size * 1.5);
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1.0;
+
+      // 6F. Shaded Drifting Asteroids with Craters
       s.asteroids.forEach(ast => {
         ctx.save();
         ctx.translate(ast.x, ast.y);
         ctx.rotate(ast.rotation);
-        ctx.fillStyle = '#1e293b';
+
+        // Body
+        ctx.fillStyle = ast.color;
         ctx.strokeStyle = '#334155';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -1415,223 +1478,210 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+
+        // Craters
+        ctx.fillStyle = '#0f172a';
+        ast.craters.forEach(c => {
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
         ctx.restore();
       });
 
       // -------------------------------------------------------------
-      // 7F. DRAW ENEMIES
+      // 6G. DRAW ENEMIES (ONLY IN PLAYING)
       // -------------------------------------------------------------
-      s.enemies.forEach(e => {
-        ctx.save();
-        ctx.translate(e.x, e.y);
+      if (gameState === 'PLAYING') {
+        s.enemies.forEach(e => {
+          ctx.save();
+          ctx.translate(e.x, e.y);
 
-        if (!e.alive) {
-          ctx.globalAlpha = Math.max(0, e.deathAnim);
-        }
-
-        if (e.hitFlash > 0) {
-          ctx.filter = 'brightness(3) drop-shadow(0 0 10px #ffffff)';
-        }
-
-        if (e.type === 'scout') {
-          // SCOUT: Sleek arrow interceptor
-          ctx.fillStyle = '#0f172a';
-          ctx.strokeStyle = e.color;
-          ctx.lineWidth = 2;
-          ctx.shadowColor = e.glowColor;
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(0, 16);
-          ctx.lineTo(-14, -14);
-          ctx.lineTo(0, -6);
-          ctx.lineTo(14, -14);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-
-          // Scout eye core
-          ctx.fillStyle = e.glowColor;
-          ctx.beginPath();
-          ctx.arc(0, 4, 3, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (e.type === 'fighter') {
-          // FIGHTER: Winged predator
-          ctx.fillStyle = '#18181b';
-          ctx.strokeStyle = e.color;
-          ctx.lineWidth = 2;
-          ctx.shadowColor = e.glowColor;
-          ctx.shadowBlur = 10;
-          ctx.beginPath();
-          ctx.moveTo(0, 20);
-          ctx.lineTo(-20, -10);
-          ctx.lineTo(-10, -20);
-          ctx.lineTo(0, -12);
-          ctx.lineTo(10, -20);
-          ctx.lineTo(20, -10);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-
-          // Amber reactor core
-          ctx.fillStyle = '#f59e0b';
-          ctx.beginPath();
-          ctx.arc(0, 2, 4, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (e.type === 'heavy') {
-          // HEAVY: Armored dreadnought cruiser
-          ctx.fillStyle = '#0f0e17';
-          ctx.strokeStyle = e.color;
-          ctx.lineWidth = 2.5;
-          ctx.shadowColor = e.glowColor;
-          ctx.shadowBlur = 12;
-          ctx.beginPath();
-          ctx.roundRect(-28, -26, 56, 48, 6);
-          ctx.fill();
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-
-          // Heavy forward armor plates
-          ctx.fillStyle = '#312e81';
-          ctx.fillRect(-22, 10, 44, 8);
-
-          // Purple Fusion Reactor
-          ctx.fillStyle = '#c084fc';
-          ctx.shadowColor = '#c084fc';
-          ctx.shadowBlur = 14;
-          ctx.beginPath();
-          ctx.arc(0, -2, 7, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        } else if (e.type === 'elite') {
-          // ELITE: Geometric diamond striker with shield
-          ctx.fillStyle = '#1e1b4b';
-          ctx.strokeStyle = e.color;
-          ctx.lineWidth = 2.5;
-          ctx.shadowColor = e.glowColor;
-          ctx.shadowBlur = 14;
-          ctx.beginPath();
-          ctx.moveTo(0, 24);
-          ctx.lineTo(-22, 0);
-          ctx.lineTo(0, -24);
-          ctx.lineTo(22, 0);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-
-          // Energy shield glow on elite
-          if (e.shield && e.shield > 0) {
-            ctx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(0, 0, e.radius + 6, 0, Math.PI * 2);
-            ctx.stroke();
+          if (!e.alive) {
+            ctx.globalAlpha = Math.max(0, e.deathAnim);
           }
-        }
 
-        // Enemy Health Bar
-        if (e.hp < e.maxHp && e.alive) {
-          const barW = e.radius * 1.8;
-          ctx.fillStyle = 'rgba(0,0,0,0.6)';
-          ctx.fillRect(-barW / 2, -e.radius - 12, barW, 4);
-          ctx.fillStyle = e.color;
-          ctx.fillRect(-barW / 2, -e.radius - 12, barW * (e.hp / e.maxHp), 4);
-        }
+          if (e.hitFlash > 0) {
+            ctx.filter = 'brightness(3) drop-shadow(0 0 12px #ffffff)';
+          }
 
-        ctx.restore();
-      });
+          if (e.type === 'scout') {
+            // SCOUT: Fast needle/arrow interceptor
+            ctx.fillStyle = '#061325';
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = e.glowColor;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(0, 18);
+            ctx.lineTo(-15, -14);
+            ctx.lineTo(0, -6);
+            ctx.lineTo(15, -14);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
 
-      // -------------------------------------------------------------
-      // 7G. DRAW PLAYER SPACECRAFT
-      // -------------------------------------------------------------
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.bankAngle);
+            // Scout sensor core
+            ctx.fillStyle = e.glowColor;
+            ctx.beginPath();
+            ctx.arc(0, 4, 3, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (e.type === 'fighter') {
+            // FIGHTER: Winged predator
+            ctx.fillStyle = '#1c1917';
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = e.glowColor;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(0, 22);
+            ctx.lineTo(-22, -10);
+            ctx.lineTo(-10, -20);
+            ctx.lineTo(0, -12);
+            ctx.lineTo(10, -20);
+            ctx.lineTo(22, -10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
 
-      if (p.hitFlash > 0) {
-        ctx.filter = 'brightness(3) drop-shadow(0 0 12px #ef4444)';
+            // Reactor core
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(0, 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (e.type === 'heavy') {
+            // HEAVY: Massive armored dreadnought cruiser
+            ctx.fillStyle = '#110b20';
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = e.glowColor;
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.roundRect(-30, -26, 60, 52, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Armor plating
+            ctx.fillStyle = '#312e81';
+            ctx.fillRect(-24, 10, 48, 8);
+
+            // Fusion core
+            ctx.fillStyle = '#c084fc';
+            ctx.shadowColor = '#c084fc';
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.arc(0, -2, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          } else if (e.type === 'elite') {
+            // ELITE: Geometric diamond command striker
+            ctx.fillStyle = '#210515';
+            ctx.strokeStyle = e.color;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = e.glowColor;
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.moveTo(0, 26);
+            ctx.lineTo(-24, 0);
+            ctx.lineTo(0, -26);
+            ctx.lineTo(24, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Regenerative Shield Bubble
+            if (e.shield && e.shield > 0) {
+              ctx.strokeStyle = 'rgba(244, 63, 94, 0.7)';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(0, 0, e.radius + 6, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          }
+
+          // Enemy Health Bar
+          if (e.hp < e.maxHp && e.alive) {
+            const barW = e.radius * 1.8;
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(-barW / 2, -e.radius - 12, barW, 4);
+            ctx.fillStyle = e.color;
+            ctx.fillRect(-barW / 2, -e.radius - 12, barW * (e.hp / e.maxHp), 4);
+          }
+
+          ctx.restore();
+        });
       }
 
-      // Cyan Energy Shield Aura
-      if (p.shield > 0) {
-        const shieldAlpha = 0.25 + (p.shield / p.maxShield) * 0.35;
-        ctx.strokeStyle = `rgba(56, 189, 248, ${shieldAlpha})`;
-        ctx.lineWidth = 2;
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(0, 0, 32, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+      // -------------------------------------------------------------
+      // 6H. DRAW PLAYER SPACESHIP
+      // -------------------------------------------------------------
+      if (gameState === 'PLAYING') {
+        drawPlayerShip(
+          ctx,
+          ship,
+          p.x,
+          p.y,
+          p.bankAngle,
+          p.shield,
+          p.maxShield,
+          p.hitFlash,
+          s.time,
+          p.muzzleFlashTimer > 0,
+          1
+        );
+      } else if (gameState === 'START') {
+        // In Main Menu: Show selected ship cruising smoothly forward in the center
+        const hoverY = Math.sin(s.time * 2) * 8;
+        const cruiseBank = Math.sin(s.time * 0.8) * 0.12;
+        drawPlayerShip(
+          ctx,
+          ship,
+          viewW * 0.65,
+          viewH * 0.52 + hoverY,
+          cruiseBank,
+          ship.baseShield,
+          ship.baseShield,
+          0,
+          s.time,
+          false,
+          1.8
+        );
       }
 
-      // Spacecraft Main Wings & Hull
-      ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 12;
-
-      ctx.beginPath();
-      ctx.moveTo(0, -26); // Nose
-      ctx.lineTo(8, -10);
-      ctx.lineTo(24, 14); // Right wing tip
-      ctx.lineTo(16, 20);
-      ctx.lineTo(6, 14);
-      ctx.lineTo(0, 18);
-      ctx.lineTo(-6, 14);
-      ctx.lineTo(-16, 20);
-      ctx.lineTo(-24, 14); // Left wing tip
-      ctx.lineTo(-8, -10);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Cockpit Canopy Visor
-      ctx.fillStyle = '#00f0ff';
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.ellipse(0, -6, 4.5, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Twin Plasma Cannon Barrels
-      ctx.fillStyle = '#64748b';
-      ctx.fillRect(-15, -4, 3, 16);
-      ctx.fillRect(12, -4, 3, 16);
-
-      ctx.restore();
-
       // -------------------------------------------------------------
-      // 7H. DRAW PROJECTILES & PARTICLES
+      // 6I. DRAW PROJECTILES & PARTICLES
       // -------------------------------------------------------------
-      s.projectiles.forEach(pr => {
-        ctx.save();
-        if (pr.isEnergyBlast) {
-          // Shockwave Ring
-          const blastR = 25 + (1 - pr.life / pr.maxLife) * 320;
-          ctx.strokeStyle = pr.color;
-          ctx.shadowColor = pr.glowColor;
-          ctx.shadowBlur = 24;
-          ctx.lineWidth = 6 * (pr.life / pr.maxLife);
-          ctx.beginPath();
-          ctx.arc(pr.x, pr.y, blastR, 0, Math.PI * 2);
-          ctx.stroke();
-        } else {
-          // Plasma Bolt
-          ctx.fillStyle = pr.color;
-          ctx.shadowColor = pr.glowColor;
-          ctx.shadowBlur = 12;
-          ctx.beginPath();
-          ctx.arc(pr.x, pr.y, pr.radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-      });
+      if (gameState === 'PLAYING') {
+        s.projectiles.forEach(pr => {
+          ctx.save();
+          if (pr.isEnergyBlast) {
+            const blastR = 25 + (1 - pr.life / pr.maxLife) * 360;
+            ctx.strokeStyle = pr.color;
+            ctx.shadowColor = pr.glowColor;
+            ctx.shadowBlur = 24;
+            ctx.lineWidth = 6 * (pr.life / pr.maxLife);
+            ctx.beginPath();
+            ctx.arc(pr.x, pr.y, blastR, 0, Math.PI * 2);
+            ctx.stroke();
+          } else {
+            // High velocity laser bolt with glowing trail
+            ctx.fillStyle = pr.color;
+            ctx.shadowColor = pr.glowColor;
+            ctx.shadowBlur = 14;
+
+            // Elongated beam
+            ctx.beginPath();
+            ctx.ellipse(pr.x, pr.y, pr.radius, pr.radius * 2.4, Math.atan2(pr.vy, pr.vx) - Math.PI / 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        });
+      }
 
       // Particles
       s.particles.forEach(pt => {
@@ -1644,56 +1694,84 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
       ctx.globalAlpha = 1.0;
 
       // -------------------------------------------------------------
-      // 7I. FUTURISTIC RETICLE / CROSSHAIR
+      // 6J. FUTURISTIC RETICLE / CROSSHAIR WITH HIT FEEDBACK
       // -------------------------------------------------------------
-      const c = s.crosshair;
-      ctx.save();
-      ctx.translate(c.x, c.y);
+      if (gameState === 'PLAYING') {
+        const c = s.crosshair;
+        ctx.save();
+        ctx.translate(c.x, c.y);
 
-      const crossColor = c.isLockedOn ? '#f43f5e' : '#00f0ff';
-      ctx.strokeStyle = crossColor;
-      ctx.shadowColor = crossColor;
-      ctx.shadowBlur = 8;
-      ctx.lineWidth = 1.5;
+        const crossColor = c.isLockedOn ? '#f43f5e' : '#00f0ff';
+        ctx.strokeStyle = crossColor;
+        ctx.shadowColor = crossColor;
+        ctx.shadowBlur = 8;
+        ctx.lineWidth = 1.5;
 
-      // Outer targeting brackets
-      const retSize = c.isLockedOn ? 14 : 11;
-      ctx.beginPath();
-      // Top left
-      ctx.moveTo(-retSize, -retSize + 5);
-      ctx.lineTo(-retSize, -retSize);
-      ctx.lineTo(-retSize + 5, -retSize);
-      // Top right
-      ctx.moveTo(retSize - 5, -retSize);
-      ctx.lineTo(retSize, -retSize);
-      ctx.lineTo(retSize, -retSize + 5);
-      // Bottom left
-      ctx.moveTo(-retSize, retSize - 5);
-      ctx.lineTo(-retSize, retSize);
-      ctx.lineTo(-retSize + 5, retSize);
-      // Bottom right
-      ctx.moveTo(retSize - 5, retSize);
-      ctx.lineTo(retSize, retSize);
-      ctx.lineTo(retSize, retSize - 5);
-      ctx.stroke();
+        // Outer brackets
+        const retSize = c.isLockedOn ? 14 : 11;
+        ctx.beginPath();
+        // Top left
+        ctx.moveTo(-retSize, -retSize + 5);
+        ctx.lineTo(-retSize, -retSize);
+        ctx.lineTo(-retSize + 5, -retSize);
+        // Top right
+        ctx.moveTo(retSize - 5, -retSize);
+        ctx.lineTo(retSize, -retSize);
+        ctx.lineTo(retSize, -retSize + 5);
+        // Bottom left
+        ctx.moveTo(-retSize, retSize - 5);
+        ctx.lineTo(-retSize, retSize);
+        ctx.lineTo(-retSize + 5, retSize);
+        // Bottom right
+        ctx.moveTo(retSize - 5, retSize);
+        ctx.lineTo(retSize, retSize);
+        ctx.lineTo(retSize, retSize - 5);
+        ctx.stroke();
 
-      // Center dot
-      ctx.fillStyle = crossColor;
-      ctx.beginPath();
-      ctx.arc(0, 0, 2, 0, Math.PI * 2);
-      ctx.fill();
+        // Center dot
+        ctx.fillStyle = crossColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.restore();
+        // Animated Hit Marker Feedback (4 diagonal tick marks on impact!)
+        if (c.hitMarkerTimer > 0) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 10;
+          ctx.lineWidth = 2;
+          const hm = 7;
+          ctx.beginPath();
+          ctx.moveTo(-hm, -hm);
+          ctx.lineTo(-hm - 4, -hm - 4);
+          ctx.moveTo(hm, -hm);
+          ctx.lineTo(hm + 4, -hm - 4);
+          ctx.moveTo(-hm, hm);
+          ctx.lineTo(-hm - 4, hm + 4);
+          ctx.moveTo(hm, hm);
+          ctx.lineTo(hm + 4, hm + 4);
+          ctx.stroke();
+        }
 
-      // Low Health Crimson Vignette Overlay
-      if (p.hp <= 25) {
-        const pulse = (Math.sin(s.time * 8) + 1) * 0.5;
-        ctx.fillStyle = `rgba(239, 68, 68, ${0.1 + pulse * 0.15})`;
-        ctx.fillRect(0, 0, viewW, viewH);
+        // Lock indicator label
+        if (c.isLockedOn) {
+          ctx.font = 'bold 8px monospace';
+          ctx.fillStyle = '#f43f5e';
+          ctx.textAlign = 'center';
+          ctx.fillText('TARGET LOCK', 0, retSize + 12);
+        }
+
+        ctx.restore();
+
+        // Critical Low Health Crimson Vignette
+        if (p.hp <= 25) {
+          const pulse = (Math.sin(s.time * 8) + 1) * 0.5;
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.1 + pulse * 0.15})`;
+          ctx.fillRect(0, 0, viewW, viewH);
+        }
       }
 
       ctx.restore();
-
       animId = requestAnimationFrame(gameLoop);
     };
 
@@ -1702,17 +1780,19 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [gameState, sensitivity, fireWeapon, handleGameOver, soundEnabled]);
+  }, [gameState, sensitivity, quality, fireWeapon, handleGameOver, soundEnabled]);
+
+  const accuracy = shotsFired > 0 ? (shotsHit / shotsFired) * 100 : 85;
 
   return (
     <div
       ref={containerRef}
       id="galaxy-commander-root"
-      className="relative w-full h-full flex flex-col items-center justify-center bg-[#030712] text-white select-none overflow-hidden font-sans"
+      className="relative w-full h-full flex flex-col items-center justify-center bg-[#030712] text-white select-none overflow-hidden font-mono"
     >
-      {/* -------------------------------------------------------------
-          1. FULLSCREEN CANVAS LAYER
-          ------------------------------------------------------------- */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          1. FULLSCREEN DEEP-SPACE CANVAS
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <canvas
         ref={canvasRef}
         id="galaxy-commander-canvas"
@@ -1720,405 +1800,219 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onContextMenu={e => e.preventDefault()}
-        className="absolute inset-0 w-full h-full cursor-none object-cover"
+        className={`absolute inset-0 w-full h-full object-cover ${
+          gameState === 'PLAYING' ? 'cursor-none' : 'cursor-default'
+        }`}
       />
 
-      {/* -------------------------------------------------------------
-          2. TOP FUTURISTIC GLASS HUD
-          ------------------------------------------------------------- */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          2. PROFESSIONAL SCI-FI IN-GAME HUD
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {gameState === 'PLAYING' && (
-        <header
-          id="gc-top-hud"
-          className="absolute top-0 inset-x-0 z-20 flex items-center justify-between p-3 sm:p-4 pointer-events-none"
-        >
-          {/* TOP LEFT: GALAXY COMMANDER • HP BAR • SHIELD BAR */}
-          <div className="flex flex-col gap-1.5 pointer-events-auto bg-slate-950/70 border border-white/10 rounded-2xl p-2.5 sm:p-3 backdrop-blur-md shadow-xl min-w-[170px] sm:min-w-[210px]">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-black tracking-widest text-cyan-400">
-                GALAXY COMMANDER
-              </span>
-              <span className="text-[9px] font-mono text-slate-400">MK-IV</span>
-            </div>
-
-            {/* Health Bar */}
-            <div className="space-y-0.5">
-              <div className="flex justify-between text-[9px] font-mono">
-                <span className="text-slate-400 font-bold">HP</span>
-                <span className={health <= 25 ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-300'}>
-                  {health}%
-                </span>
-              </div>
-              <div className="w-full h-1.5 sm:h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                <div
-                  className={`h-full transition-all duration-150 rounded-full ${
-                    health > 50
-                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-400'
-                      : health > 25
-                      ? 'bg-gradient-to-r from-amber-500 to-rose-400'
-                      : 'bg-rose-500 animate-pulse'
-                  }`}
-                  style={{ width: `${health}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Shield Bar */}
-            <div className="space-y-0.5">
-              <div className="flex justify-between text-[9px] font-mono">
-                <span className="text-cyan-400 font-bold">SHIELD</span>
-                <span className="text-cyan-300">{shield}%</span>
-              </div>
-              <div className="w-full h-1.5 sm:h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-300 transition-all duration-150 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.5)]"
-                  style={{ width: `${shield}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* TOP CENTER: WAVE 01 • DESTROY ALL HOSTILES */}
-          <div className="flex flex-col items-center pointer-events-auto bg-slate-950/70 border border-white/10 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur-md shadow-xl text-center">
-            <div className="flex items-center gap-1.5">
-              <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-              <span className="text-[11px] sm:text-xs font-black tracking-widest text-white">
-                WAVE 0{wave}
-              </span>
-            </div>
-            <span className="text-[9px] sm:text-[10px] font-mono text-cyan-300 tracking-wider">
-              {activeHostiles > 0 ? `HOSTILES DETECTED: ${activeHostiles}` : 'DESTROY ALL HOSTILES'}
-            </span>
-          </div>
-
-          {/* TOP RIGHT: SCORE • KILLS • SYSTEM BUTTONS */}
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <div className="bg-slate-950/70 border border-white/10 rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 backdrop-blur-md shadow-xl flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-[9px] font-mono text-slate-400">SCORE</div>
-                <div className="text-xs sm:text-sm font-black font-mono text-cyan-400 tracking-wider">
-                  {score.toString().padStart(6, '0')}
-                </div>
-              </div>
-              <div className="w-px h-6 bg-white/10" />
-              <div className="text-right">
-                <div className="text-[9px] font-mono text-slate-400">KILLS</div>
-                <div className="text-xs sm:text-sm font-black font-mono text-rose-400 tracking-wider">
-                  {kills.toString().padStart(2, '0')}
-                </div>
-              </div>
-            </div>
-
-            {/* Audio Toggle */}
-            <button
-              id="gc-sound-btn"
-              type="button"
-              onClick={() => {
-                const muted = sound.toggleMute();
-                setSoundEnabled(!muted);
-              }}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md shadow-md active:scale-95"
-              title="Sound Toggle"
-            >
-              {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-            </button>
-
-            {/* Fullscreen Button */}
-            <button
-              id="gc-fullscreen-btn"
-              type="button"
-              onClick={toggleFullscreen}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md shadow-md active:scale-95"
-              title="Toggle Fullscreen"
-            >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-
-            {/* Pause Button */}
-            <button
-              id="gc-pause-btn"
-              type="button"
-              onClick={() => setGameState('PAUSED')}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md shadow-md active:scale-95"
-              title="Pause Game"
-            >
-              <Pause className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
+        <GalaxyHUD
+          ship={currentShip}
+          health={health}
+          maxHealth={maxHealth}
+          shield={shield}
+          maxShield={maxShield}
+          wave={wave}
+          activeHostiles={activeHostiles}
+          score={score}
+          kills={kills}
+          ammo={ammo}
+          maxAmmo={maxAmmo}
+          isReloading={isReloading}
+          energyBlastCooldown={energyBlastCooldown}
+          isFullscreen={isFullscreen}
+          soundEnabled={soundEnabled}
+          isTouchDevice={isTouchDevice}
+          joystickPos={joystickPos}
+          onToggleFullscreen={toggleFullscreen}
+          onToggleSound={() => {
+            const muted = sound.toggleMute();
+            setSoundEnabled(!muted);
+          }}
+          onPause={() => setGameState('PAUSED')}
+          onTriggerReload={triggerReload}
+          onFireEnergyBlast={fireEnergyBlast}
+          onMobileFireStart={() => {
+            isMobileFiringRef.current = true;
+            fireWeapon();
+          }}
+          onMobileFireEnd={() => {
+            isMobileFiringRef.current = false;
+          }}
+          onJoystickTouchStart={handleJoystickTouchStart}
+          onJoystickTouchMove={handleJoystickTouchMove}
+          onJoystickTouchEnd={handleJoystickTouchEnd}
+        />
       )}
 
-      {/* -------------------------------------------------------------
-          3. BOTTOM HUD: WEAPON, AMMO & ENERGY BLAST COOLDOWN
-          ------------------------------------------------------------- */}
-      {gameState === 'PLAYING' && (
-        <footer
-          id="gc-bottom-hud"
-          className="absolute bottom-0 inset-x-0 z-20 flex items-end justify-between p-3 sm:p-5 pointer-events-none"
-        >
-          {/* BOTTOM LEFT: HINTS */}
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-slate-400/80 bg-slate-950/60 border border-white/5 rounded-xl px-3 py-1.5 backdrop-blur-sm">
-            <span>[WASD] MOVE</span>
-            <span>•</span>
-            <span>[LMB] FIRE</span>
-            <span>•</span>
-            <span>[SPACE] BLAST</span>
-            <span>•</span>
-            <span>[R] RELOAD</span>
-          </div>
-
-          {/* BOTTOM RIGHT: WEAPON & ENERGY BLAST STATUS */}
-          <div className="flex items-center gap-2 pointer-events-auto ml-auto bg-slate-950/70 border border-white/10 rounded-2xl p-2.5 sm:p-3 backdrop-blur-md shadow-xl">
-            {/* Plasma Cannon Status */}
-            <div className="text-right pr-2">
-              <div className="text-[9px] font-mono text-slate-400">WEAPON</div>
-              <div className="text-[11px] sm:text-xs font-bold text-cyan-400">PLASMA CANNON</div>
-              <div className="text-[10px] font-mono text-slate-300 flex items-center justify-end gap-1.5 mt-0.5">
-                {isReloading ? (
-                  <span className="text-amber-400 font-bold animate-pulse flex items-center gap-1">
-                    <RefreshCw className="w-2.5 h-2.5 animate-spin" /> RELOADING
-                  </span>
-                ) : (
-                  <span>
-                    AMMO <strong className="text-white">{ammo}</strong> / {maxAmmo}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Energy Blast Ability Cooldown Pip */}
-            <div className="border-l border-white/10 pl-2 text-center min-w-[75px]">
-              <div className="text-[9px] font-mono text-slate-400">SPECIAL</div>
-              <div
-                className={`text-[10px] font-bold font-mono mt-0.5 rounded-lg px-2 py-1 ${
-                  energyBlastCooldown === 0
-                    ? 'bg-purple-950/80 border border-purple-500/50 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.4)]'
-                    : 'bg-slate-900 border border-white/5 text-slate-500'
-                }`}
-              >
-                {energyBlastCooldown === 0 ? 'READY' : `${(energyBlastCooldown / 60).toFixed(1)}s`}
-              </div>
-            </div>
-          </div>
-        </footer>
-      )}
-
-      {/* -------------------------------------------------------------
-          4. WAVE TRANSITION BANNER
-          ------------------------------------------------------------- */}
-      {waveBanner && (
-        <div className="absolute top-20 z-30 pointer-events-none px-6 py-2.5 rounded-2xl bg-slate-950/90 border border-cyan-400/40 text-cyan-300 text-xs sm:text-sm font-black font-mono tracking-widest shadow-[0_0_20px_rgba(0,240,255,0.3)] animate-bounce backdrop-blur-md">
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          3. CINEMATIC WAVE INCOMING BANNER
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {waveBanner && gameState === 'PLAYING' && (
+        <div className="absolute top-20 z-30 pointer-events-none px-6 py-2.5 rounded-2xl bg-[#030712]/95 border border-cyan-400/50 text-cyan-300 text-xs sm:text-sm font-black tracking-widest shadow-[0_0_30px_rgba(0,240,255,0.4)] animate-bounce backdrop-blur-md flex items-center gap-2">
+          <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
           {waveBanner}
         </div>
       )}
 
-      {/* -------------------------------------------------------------
-          5. MOBILE RESPONSIVE TOUCH CONTROLS
-          ------------------------------------------------------------- */}
-      {isTouchDevice && gameState === 'PLAYING' && (
-        <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-end p-4 pb-16 sm:pb-20">
-          <div className="flex items-end justify-between w-full">
-            {/* Virtual Joystick */}
-            <div
-              className="pointer-events-auto relative w-24 h-24 rounded-full bg-slate-950/60 border border-cyan-400/30 backdrop-blur-sm flex items-center justify-center touch-none select-none shadow-lg"
-              onTouchStart={handleJoystickTouchStart}
-              onTouchMove={handleJoystickTouchMove}
-              onTouchEnd={handleJoystickTouchEnd}
-            >
-              <div
-                className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 border border-cyan-200/50 shadow-[0_0_12px_rgba(0,240,255,0.6)] pointer-events-none transition-transform duration-75"
-                style={{
-                  transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`
-                }}
-              />
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          4. CINEMATIC MAIN MENU
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {gameState === 'START' && (
+        <div className="absolute inset-0 z-30 flex flex-col justify-between p-6 sm:p-12 pointer-events-none">
+          {/* Top Bar: Fleet Tag & Utilities */}
+          <div className="flex items-center justify-between w-full pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-400/40 text-cyan-400 text-[10px] tracking-widest uppercase">
+                ACTIVE SHIP: {currentShip.name}
+              </span>
             </div>
 
-            {/* Mobile Action Buttons: RELOAD • BLAST • FIRE */}
-            <div className="pointer-events-auto flex items-end gap-3 select-none">
-              {/* Manual Reload Button */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onTouchStart={e => {
-                  e.preventDefault();
-                  triggerReload();
+                onClick={() => {
+                  const muted = sound.toggleMute();
+                  setSoundEnabled(!muted);
                 }}
-                className="w-12 h-12 rounded-2xl bg-slate-950/70 border border-white/10 active:border-cyan-400 text-slate-300 flex flex-col items-center justify-center backdrop-blur-md active:scale-95 shadow-lg"
+                className="w-9 h-9 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-white/10 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md"
               >
-                <RefreshCw className="w-4 h-4 text-cyan-400" />
-                <span className="text-[8px] font-mono text-slate-400 mt-0.5">RELOAD</span>
+                {soundEnabled ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
               </button>
 
-              {/* Special Ability: Energy Blast */}
               <button
                 type="button"
-                onTouchStart={e => {
-                  e.preventDefault();
-                  fireEnergyBlast();
-                }}
-                className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center backdrop-blur-md active:scale-95 shadow-lg transition-all ${
-                  energyBlastCooldown === 0
-                    ? 'bg-purple-950/80 border border-purple-400/60 text-purple-200 shadow-[0_0_14px_rgba(168,85,247,0.5)]'
-                    : 'bg-slate-950/60 border border-white/10 text-slate-500 opacity-60'
-                }`}
+                onClick={toggleFullscreen}
+                className="w-9 h-9 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-white/10 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md"
               >
-                <Zap className="w-5 h-5 text-purple-400" />
-                <span className="text-[8px] font-mono mt-0.5">BLAST</span>
-              </button>
-
-              {/* Primary Weapon: Fire */}
-              <button
-                type="button"
-                onTouchStart={e => {
-                  e.preventDefault();
-                  isMobileFiringRef.current = true;
-                  fireWeapon();
-                }}
-                onTouchEnd={e => {
-                  e.preventDefault();
-                  isMobileFiringRef.current = false;
-                }}
-                className="w-16 h-16 rounded-3xl bg-cyan-950/80 border-2 border-cyan-400/80 active:bg-cyan-900 text-cyan-300 flex flex-col items-center justify-center backdrop-blur-md active:scale-95 shadow-[0_0_18px_rgba(0,240,255,0.4)]"
-              >
-                <CrosshairIcon className="w-6 h-6 text-cyan-400" />
-                <span className="text-[9px] font-black font-mono tracking-wider text-cyan-200 mt-0.5">FIRE</span>
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* -------------------------------------------------------------
-          6. START MENU
-          ------------------------------------------------------------- */}
-      {gameState === 'START' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
-          <div className="w-full max-w-sm sm:max-w-md bg-slate-950/90 border border-white/10 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl" />
-
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-400/30 text-cyan-400 text-[10px] font-mono tracking-widest uppercase mb-3">
-              <Sparkles className="w-3 h-3" /> Space Combat Survival
+          {/* Left Side: Brand Title & Navigation Buttons */}
+          <div className="max-w-md pointer-events-auto space-y-6 my-auto">
+            <div>
+              <h1 className="text-4xl sm:text-6xl font-black tracking-wider text-white font-sans uppercase leading-none">
+                GALAXY
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 mt-1">
+                  COMMANDER
+                </span>
+              </h1>
+              <p className="text-xs sm:text-sm text-cyan-300/90 tracking-widest uppercase mt-2 font-bold">
+                DEFEND THE GALAXY
+              </p>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-black tracking-wider text-white font-sans uppercase">
-              GALAXY
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
-                COMMANDER
-              </span>
-            </h1>
-
-            <p className="text-xs sm:text-sm font-mono text-slate-400 mt-2 tracking-wide uppercase">
-              DEFEND THE GALAXY
-            </p>
-
-            <div className="mt-6 space-y-2.5">
+            {/* Menu Buttons: START MISSION, SHIP SELECT, MISSIONS, SETTINGS */}
+            <div className="space-y-2.5 max-w-xs">
               <button
                 id="gc-play-btn"
                 type="button"
-                onClick={startGame}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-sm tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => startMission(1, 0, 0)}
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-[0_0_24px_rgba(0,240,255,0.4)] active:scale-98 flex items-center justify-center gap-2 cursor-pointer font-sans"
               >
-                <Play className="w-4 h-4 fill-current" /> PLAY MISSION
+                <Play className="w-4 h-4 fill-current" /> START MISSION
               </button>
 
               <button
-                id="gc-howtoplay-btn"
+                id="gc-shipselect-btn"
                 type="button"
-                onClick={() => setShowHowToPlay(true)}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => setGameState('SHIP_SELECT')}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-cyan-400/40 text-slate-200 hover:text-white text-xs font-bold tracking-wider uppercase transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <HelpCircle className="w-3.5 h-3.5" /> HOW TO PLAY
+                <Rocket className="w-4 h-4 text-cyan-400" /> SHIP SELECT
+              </button>
+
+              <button
+                id="gc-missions-btn"
+                type="button"
+                onClick={() => setShowMissionsModal(true)}
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-cyan-400/40 text-slate-200 hover:text-white text-xs font-bold tracking-wider uppercase transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Trophy className="w-4 h-4 text-amber-400" /> MISSIONS
               </button>
 
               <button
                 id="gc-settings-btn"
                 type="button"
                 onClick={() => setShowSettings(true)}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 hover:border-cyan-400/40 text-slate-200 hover:text-white text-xs font-bold tracking-wider uppercase transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Settings className="w-3.5 h-3.5" /> SETTINGS
+                <Settings className="w-4 h-4 text-purple-400" /> SETTINGS
               </button>
 
               {onBack && (
                 <button
                   type="button"
                   onClick={onBack}
-                  className="w-full py-2 px-4 text-slate-400 hover:text-slate-200 text-xs font-mono tracking-wider transition-colors cursor-pointer"
+                  className="w-full py-2 px-4 text-slate-400 hover:text-slate-200 text-[11px] tracking-wider transition-colors cursor-pointer"
                 >
                   EXIT TO HUB
                 </button>
               )}
             </div>
-
-            {highScore > 0 && (
-              <div className="mt-5 text-[11px] font-mono text-slate-400 flex items-center justify-center gap-1.5">
-                <span>ALL-TIME RECORD:</span>
-                <strong className="text-cyan-400">{highScore.toLocaleString()} PTS</strong>
-              </div>
-            )}
           </div>
-        </div>
-      )}
 
-      {/* -------------------------------------------------------------
-          7. HOW TO PLAY MODAL
-          ------------------------------------------------------------- */}
-      {showHowToPlay && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-sm bg-slate-950 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-4">
-            <h2 className="text-lg font-black tracking-wider text-cyan-400 font-sans uppercase text-center">
-              HOW TO PLAY
-            </h2>
-
-            <div className="space-y-3 text-xs font-mono text-slate-300">
-              <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span className="text-slate-400">MOVE</span>
-                <span className="text-cyan-300 font-bold">WASD / ARROW KEYS</span>
-              </div>
-              <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span className="text-slate-400">FIRE</span>
-                <span className="text-cyan-300 font-bold">LEFT MOUSE BUTTON</span>
-              </div>
-              <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span className="text-slate-400">ENERGY BLAST</span>
-                <span className="text-purple-300 font-bold">SPACE / ABILITY BTN</span>
-              </div>
-              <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span className="text-slate-400">RELOAD</span>
-                <span className="text-cyan-300 font-bold">R KEY</span>
-              </div>
-              <div className="flex justify-between border-b border-white/5 pb-1.5">
-                <span className="text-slate-400">MOBILE</span>
-                <span className="text-cyan-300 font-bold">JOYSTICK + FIRE BTN</span>
-              </div>
+          {/* Bottom Record Footer */}
+          <div className="pointer-events-auto flex items-center justify-between text-xs text-slate-400 border-t border-white/10 pt-4">
+            <div>
+              ALL-TIME RECORD: <strong className="text-cyan-400">{highScore.toLocaleString()} PTS</strong>
             </div>
-
-            <p className="text-[11px] font-mono text-center text-slate-400 pt-1">
-              SURVIVE THE WAVES AND DESTROY HOSTILE SHIPS.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setShowHowToPlay(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-mono text-xs tracking-wider uppercase transition-all cursor-pointer"
-            >
-              BACK
-            </button>
+            <div className="text-[10px] text-slate-500">SECTOR 7 DEFENSE PROTOCOL</div>
           </div>
         </div>
       )}
 
-      {/* -------------------------------------------------------------
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          5. SHIP SELECTION MODAL
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {gameState === 'SHIP_SELECT' && (
+        <ShipSelectModal
+          currentShipId={selectedShipId}
+          onSelectShip={handleSelectShip}
+          onBack={() => setGameState('START')}
+        />
+      )}
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          6. WAVE CLEARED / MISSION COMPLETE MODAL
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {gameState === 'WAVE_CLEAR' && (
+        <WaveClearModal
+          wave={wave}
+          score={score}
+          kills={kills}
+          accuracy={accuracy}
+          rewardPoints={wave * 500}
+          onNextWave={() => startMission(wave + 1, score, kills)}
+          onReplay={() => startMission(wave, score, kills)}
+          onMainMenu={() => setGameState('START')}
+        />
+      )}
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          7. MISSIONS INTEL MODAL
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {showMissionsModal && (
+        <MissionsBriefingModal onBack={() => setShowMissionsModal(false)} />
+      )}
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           8. SETTINGS MODAL
-          ------------------------------------------------------------- */}
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {showSettings && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-sm bg-slate-950 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="w-full max-w-sm bg-[#030712] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-4">
             <h2 className="text-lg font-black tracking-wider text-cyan-400 font-sans uppercase text-center">
-              SYSTEM SETTINGS
+              SYSTEM CONFIGURATION
             </h2>
 
-            <div className="space-y-3 text-xs font-mono">
-              {/* Sound Toggle */}
+            <div className="space-y-3 text-xs">
+              {/* Sound */}
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
                 <span className="text-slate-300">SOUND EFFECTS</span>
                 <button
@@ -2127,7 +2021,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
                     const muted = sound.toggleMute();
                     setSoundEnabled(!muted);
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  className={`px-3 py-1 rounded-lg text-xs font-bold ${
                     soundEnabled ? 'bg-cyan-950 text-cyan-400 border border-cyan-400/40' : 'bg-slate-900 text-slate-500'
                   }`}
                 >
@@ -2135,14 +2029,14 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
                 </button>
               </div>
 
-              {/* Ambient Synth Music Toggle */}
+              {/* Space Ambience */}
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-slate-300">SPACE AMBIENCE</span>
+                <span className="text-slate-300">SPACE SYNTH AMBIENCE</span>
                 <button
                   type="button"
                   onClick={() => setMusicEnabled(!musicEnabled)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                    musicEnabled ? 'bg-purple-950 text-purple-400 border border-purple-400/40' : 'bg-slate-900 text-slate-500'
+                  className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                    musicEnabled ? 'bg-purple-950 text-purple-300 border border-purple-400/40' : 'bg-slate-900 text-slate-500'
                   }`}
                 >
                   {musicEnabled ? 'ON' : 'OFF'}
@@ -2151,7 +2045,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
 
               {/* Sensitivity */}
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-slate-300">THRUSTER SENSITIVITY</span>
+                <span className="text-slate-300">MANEUVER SENSITIVITY</span>
                 <div className="flex gap-1">
                   {(['LOW', 'MEDIUM', 'HIGH'] as const).map(lvl => (
                     <button
@@ -2170,7 +2064,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
 
               {/* Graphics Quality */}
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-slate-300">RENDER QUALITY</span>
+                <span className="text-slate-300">RENDER FIDELITY</span>
                 <div className="flex gap-1">
                   {(['LOW', 'MEDIUM', 'HIGH'] as const).map(q => (
                     <button
@@ -2191,26 +2085,26 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
             <button
               type="button"
               onClick={() => setShowSettings(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-mono text-xs tracking-wider uppercase transition-all cursor-pointer"
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
             >
-              BACK
+              CONFIRM SETTINGS
             </button>
           </div>
         </div>
       )}
 
-      {/* -------------------------------------------------------------
-          9. PAUSE MODAL
-          ------------------------------------------------------------- */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          9. MINIMAL CENTERED PAUSE OVERLAY
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {gameState === 'PAUSED' && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
-          <div className="w-full max-w-sm bg-slate-950/95 border border-white/10 rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <div className="w-full max-w-sm bg-[#030712]/95 border border-white/15 rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-4">
             <div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
-                GALAXY COMMANDER
+              <span className="text-[10px] text-cyan-400 uppercase tracking-widest font-bold">
+                TACTICAL PAUSE
               </span>
-              <h2 className="text-2xl font-black tracking-wider text-cyan-400 font-sans uppercase">
-                MISSION PAUSED
+              <h2 className="text-2xl font-black tracking-wider text-white font-sans uppercase">
+                PAUSED
               </h2>
             </div>
 
@@ -2218,15 +2112,15 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
               <button
                 type="button"
                 onClick={() => setGameState('PLAYING')}
-                className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs tracking-wider uppercase transition-all cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs tracking-wider uppercase transition-all cursor-pointer shadow-[0_0_16px_rgba(0,240,255,0.3)]"
               >
                 RESUME
               </button>
 
               <button
                 type="button"
-                onClick={startGame}
-                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-all cursor-pointer"
+                onClick={() => startMission(wave, 0, 0)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
               >
                 RESTART
               </button>
@@ -2234,7 +2128,7 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
               <button
                 type="button"
                 onClick={() => setShowSettings(true)}
-                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-all cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
               >
                 SETTINGS
               </button>
@@ -2242,68 +2136,89 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
               <button
                 type="button"
                 onClick={() => setGameState('START')}
-                className="w-full py-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/5 text-slate-400 hover:text-slate-200 font-mono text-xs tracking-wider uppercase transition-all cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-white/5 text-slate-400 hover:text-slate-200 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
               >
-                EXIT TO MENU
+                EXIT MISSION
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* -------------------------------------------------------------
-          10. GAME OVER / MISSION FAILED
-          ------------------------------------------------------------- */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          10. GAME OVER / MISSION FAILED SCREEN
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {gameState === 'GAMEOVER' && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
-          <div className="w-full max-w-sm sm:max-w-md bg-slate-950/95 border border-rose-500/20 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="w-full max-w-sm sm:max-w-md bg-[#030712]/95 border border-rose-500/30 rounded-3xl p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(244,63,94,0.2)] relative overflow-hidden">
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl" />
 
             <h2 className="text-3xl font-black tracking-wider text-rose-500 font-sans uppercase">
               MISSION FAILED
             </h2>
-            <p className="text-xs font-mono text-slate-400 mt-1 uppercase">
+            <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">
               HULL INTEGRITY COMPROMISED
             </p>
 
-            <div className="my-6 grid grid-cols-3 gap-2 bg-slate-900/60 border border-white/5 rounded-2xl p-3 text-center">
-              <div>
-                <div className="text-[9px] font-mono text-slate-400">WAVE REACHED</div>
-                <div className="text-lg font-black font-mono text-cyan-400 mt-0.5">
-                  0{wave}
+            {/* Stats Breakdown: WAVE REACHED, FINAL SCORE, HOSTILES DESTROYED, BEST SCORE */}
+            <div className="my-6 grid grid-cols-2 gap-2 bg-slate-900/60 border border-white/10 rounded-2xl p-3 text-center text-xs">
+              <div className="p-2">
+                <div className="text-[9px] text-slate-400">WAVE REACHED</div>
+                <div className="text-base font-black text-cyan-400 mt-0.5">
+                  WAVE {wave.toString().padStart(2, '0')}
                 </div>
               </div>
-              <div className="border-x border-white/10">
-                <div className="text-[9px] font-mono text-slate-400">ENEMIES DESTROYED</div>
-                <div className="text-lg font-black font-mono text-rose-400 mt-0.5">
+
+              <div className="p-2 border-l border-white/10">
+                <div className="text-[9px] text-slate-400">HOSTILES DESTROYED</div>
+                <div className="text-base font-black text-rose-400 mt-0.5">
                   {kills}
                 </div>
               </div>
-              <div>
-                <div className="text-[9px] font-mono text-slate-400">FINAL SCORE</div>
-                <div className="text-lg font-black font-mono text-amber-400 mt-0.5">
+
+              <div className="p-2 border-t border-white/10">
+                <div className="text-[9px] text-slate-400">FINAL SCORE</div>
+                <div className="text-base font-black text-amber-400 mt-0.5">
                   {score.toLocaleString()}
+                </div>
+              </div>
+
+              <div className="p-2 border-t border-l border-white/10">
+                <div className="text-[9px] text-slate-400">BEST SCORE</div>
+                <div className="text-base font-black text-emerald-400 mt-0.5">
+                  {highScore.toLocaleString()}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2.5">
+            {/* Buttons: RETRY, SHIP SELECT, MAIN MENU */}
+            <div className="space-y-2">
               <button
                 id="gc-retry-btn"
                 type="button"
-                onClick={startGame}
-                className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-sm tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(0,240,255,0.4)] active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => startMission(1, 0, 0)}
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-[0_0_24px_rgba(0,240,255,0.4)] active:scale-98 flex items-center justify-center gap-2 cursor-pointer font-sans"
               >
-                <RotateCcw className="w-4 h-4" /> RETRY MISSION
+                <RotateCcw className="w-4 h-4 stroke-[3]" /> RETRY MISSION
               </button>
 
-              <button
-                type="button"
-                onClick={() => setGameState('START')}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white font-mono text-xs tracking-wider uppercase transition-all cursor-pointer"
-              >
-                MAIN MENU
-              </button>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setGameState('SHIP_SELECT')}
+                  className="py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Rocket className="w-3.5 h-3.5 text-cyan-400" /> SHIP SELECT
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setGameState('START')}
+                  className="py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  MAIN MENU
+                </button>
+              </div>
             </div>
           </div>
         </div>
