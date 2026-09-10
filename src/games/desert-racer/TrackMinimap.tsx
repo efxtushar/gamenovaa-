@@ -114,9 +114,12 @@ export const TrackMinimap: React.FC<TrackMinimapProps> = ({
 
   const playerPos = getPointAtProgress(trackProgress);
   const startFinishPos = getPointAtProgress(0);
-  const cp1Pos = getPointAtProgress(0.18);
-  const cp2Pos = getPointAtProgress(0.32);
-  const cp3Pos = getPointAtProgress(0.46);
+
+  // 10 Checkpoints spaced sequentially along circuit (10% to 92%)
+  const CHECKPOINT_FRACTIONS = useMemo(() => [0.10, 0.20, 0.30, 0.40, 0.48, 0.58, 0.66, 0.74, 0.82, 0.92], []);
+  const checkpointPositions = useMemo(() => {
+    return CHECKPOINT_FRACTIONS.map(frac => getPointAtProgress(frac));
+  }, [points, CHECKPOINT_FRACTIONS]);
 
   return (
     <div className="relative p-2.5 sm:p-3 rounded-2xl bg-neutral-950/90 border border-white/15 backdrop-blur-2xl shadow-2xl flex flex-col items-center select-none pointer-events-auto">
@@ -175,14 +178,18 @@ export const TrackMinimap: React.FC<TrackMinimapProps> = ({
             strokeOpacity="0.6"
           />
 
-          {/* Checkpoint 1 (18%) */}
-          <circle cx={cp1Pos.x} cy={cp1Pos.y} r="2.8" fill="#38bdf8" stroke="#000000" strokeWidth="1" />
-          
-          {/* Checkpoint 2 (32%) */}
-          <circle cx={cp2Pos.x} cy={cp2Pos.y} r="2.8" fill="#38bdf8" stroke="#000000" strokeWidth="1" />
-          
-          {/* Checkpoint 3 (46%) */}
-          <circle cx={cp3Pos.x} cy={cp3Pos.y} r="2.8" fill="#38bdf8" stroke="#000000" strokeWidth="1" />
+          {/* 10 Real Circuit Checkpoint Markers */}
+          {checkpointPositions.map((cp, idx) => (
+            <circle
+              key={idx}
+              cx={cp.x}
+              cy={cp.y}
+              r="2.5"
+              fill="#38bdf8"
+              stroke="#09090b"
+              strokeWidth="0.9"
+            />
+          ))}
 
           {/* Start / Finish Line (Checkered White Bar) */}
           <line

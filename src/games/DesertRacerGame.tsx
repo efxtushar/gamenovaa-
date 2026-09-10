@@ -62,6 +62,7 @@ const ROAD_WIDTH = 2400;
 const CAMERA_HEIGHT = 1050;
 const CAMERA_DEPTH = 0.84; // Field of view scaling
 const DRAW_DISTANCE = 180; // Segments ahead to draw
+const CHECKPOINT_SEGMENTS = [100, 200, 300, 400, 480, 580, 660, 740, 820, 920];
 
 export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -131,6 +132,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
   const [currentDriftCombo, setCurrentDriftCombo] = useState(0);
   const [driftMultiplier, setDriftMultiplier] = useState(1.0);
   const [isDrifting, setIsDrifting] = useState(false);
+  const [boostRemaining, setBoostRemaining] = useState(100);
+  const [isBoosting, setIsBoosting] = useState(false);
   const [countdownVal, setCountdownVal] = useState<'3' | '2' | '1' | 'GO!' | ''>('');
   const [checkpointBanner, setCheckpointBanner] = useState<string | null>(null);
   const [checkpointDistanceMeters, setCheckpointDistanceMeters] = useState<number | null>(null);
@@ -165,7 +168,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
     right: false,
     accel: false,
     brake: false,
-    drift: false
+    drift: false,
+    boost: false
   });
 
   // Check touch device
@@ -237,6 +241,9 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       durability: 82,
       isDrifting: false,
       isBraking: false,
+      isBoosting: false,
+      boostRemaining: 100,
+      boostPower: 45,
       driftAngle: 0,
       driftScore: 0,
       currentDriftCombo: 0,
@@ -259,7 +266,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       right: false,
       up: false,
       down: false,
-      drift: false
+      drift: false,
+      boost: false
     },
     countdownTimer: 0
   });
@@ -424,12 +432,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         sprites.push({ type: 'finish', offset: 0 });
       }
 
-      // Checkpoints (Gantry Arch with Neon Amber Display & Scan Beam)
-      if (i === 180) {
-        sprites.push({ type: 'checkpoint', offset: 0 });
-      } else if (i === 320) {
-        sprites.push({ type: 'checkpoint', offset: 0 });
-      } else if (i === 460) {
+      // Checkpoints (Gantry Arch with Neon Amber Display & Scan Beam across 10 sectors)
+      if (CHECKPOINT_SEGMENTS.includes(i)) {
         sprites.push({ type: 'checkpoint', offset: 0 });
       }
 
@@ -511,17 +515,40 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         sprites.push({ type: 'flag', offset: 1.4 });
       }
 
-      // ── DESERT ENVIRONMENT PROPS: Dunes, Cacti, Rocks, Mesas, Tumbleweeds ──
+      // ── DESERT ENVIRONMENT PROPS: Dunes, Cacti, Rocks, Mesas, Tumbleweeds, Palms, Outposts ──
+      // Scenic Oasis Palm Trees
+      if ((i >= 150 && i <= 210 && i % 8 === 0) || (i >= 860 && i <= 930 && i % 10 === 0)) {
+        const side = (i % 2 === 0 ? 1 : -1) * (1.75 + ((i * 13) % 40) / 30);
+        sprites.push({ type: 'palm_tree', offset: side });
+      }
+
+      // Desert Outposts & Weathered Structures
+      if (i === 70 || i === 260 || i === 440 || i === 750) {
+        sprites.push({ type: 'abandoned_structure', offset: i % 2 === 0 ? 2.1 : -2.1 });
+      }
+
+      // High-visibility Chevron Warning Arrows in sharp bends
+      if (i === 480 || i === 520 || i === 565 || i === 655 || i === 715) {
+        sprites.push({ type: 'warning_arrow', offset: i === 520 ? -1.38 : 1.38 });
+      }
+
+      // Tire Barrier Walls along sharp apexes
+      if ((i >= 490 && i <= 580 && i % 6 === 0) || (i >= 645 && i <= 725 && i % 8 === 0)) {
+        sprites.push({ type: 'tire_barrier', offset: i < 600 ? -1.32 : 1.32 });
+      }
+
       if (i > 8 && i % 5 === 0 && i !== 180 && i !== 320 && i !== 460) {
         const side = (i % 2 === 0 ? 1 : -1) * (1.75 + ((i * 19) % 100) / 45);
         const r = ((i * 37) % 100) / 100;
-        if (r < 0.35) {
+        if (r < 0.22) {
           sprites.push({ type: 'cactus', offset: side });
-        } else if (r < 0.60) {
+        } else if (r < 0.38) {
+          sprites.push({ type: 'cactus_group', offset: side });
+        } else if (r < 0.58) {
           sprites.push({ type: 'rock', offset: side });
-        } else if (r < 0.82) {
+        } else if (r < 0.78) {
           sprites.push({ type: 'dune', offset: side * 1.5 });
-        } else if (r < 0.94) {
+        } else if (r < 0.90) {
           sprites.push({ type: 'mesa', offset: side * 2.0 });
         } else {
           sprites.push({ type: 'tumbleweed', offset: side * 0.95 });
@@ -637,6 +664,9 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         durability: effective.durability,
         isDrifting: false,
         isBraking: false,
+        isBoosting: false,
+        boostRemaining: 100,
+        boostPower: 45,
         driftAngle: 0,
         driftScore: 0,
         currentDriftCombo: 0,
@@ -658,7 +688,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         right: false,
         up: false,
         down: false,
-        drift: false
+        drift: false,
+        boost: false
       },
       countdownTimer: 180 // 3 seconds at 60fps
     };
@@ -667,9 +698,12 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
     setBestTimeFormatted(savedBest ? formatTime(parseFloat(savedBest)) : '--:--');
     setRaceTimeFormatted('00:00.00');
     setPlayerSpeedKmh(0);
+    setBoostRemaining(100);
+    setIsBoosting(false);
     setPlayerLap(1);
     setPlayerPosition(4);
-    setCheckpointText(`00 / 0${selectedTrack.checkpointsPerLap}`);
+    const totalCps = selectedTrack.checkpointsPerLap || 10;
+    setCheckpointText(`00 / ${String(totalCps).padStart(2, '0')}`);
     setTimeRemaining(selectedTrack.timeLimitSec);
     setDriftScore(0);
     setCurrentDriftCombo(0);
@@ -760,6 +794,10 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         e.preventDefault();
         k.drift = true;
       }
+      if (['ShiftLeft', 'ShiftRight', 'KeyN', 'KeyB'].includes(e.code)) {
+        e.preventDefault();
+        k.boost = true;
+      }
       if (['Escape', 'KeyP'].includes(e.code)) {
         if (gameState === 'RACING') {
           setGameState('PAUSED');
@@ -776,6 +814,7 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       if (['KeyA', 'ArrowLeft'].includes(e.code)) k.left = false;
       if (['KeyD', 'ArrowRight'].includes(e.code)) k.right = false;
       if (['Space'].includes(e.code)) k.drift = false;
+      if (['ShiftLeft', 'ShiftRight', 'KeyN', 'KeyB'].includes(e.code)) k.boost = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -861,21 +900,55 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         const leftInput = s.keys.left || mobileControlsRef.current.left;
         const rightInput = s.keys.right || mobileControlsRef.current.right;
         const driftInput = s.keys.drift || mobileControlsRef.current.drift;
+        const boostInput = s.keys.boost || mobileControlsRef.current.boost;
 
         p.isBraking = brakeInput;
 
-        // Acceleration & Braking with responsive pedal feel
-        if (accelInput) {
-          p.speed = Math.min(p.maxSpeed / 12, p.speed + p.accel);
-        } else if (brakeInput) {
-          p.speed = Math.max(0, p.speed - p.brake);
+        // Nitro Boost System (Significant acceleration, higher top speed, visual fx)
+        const canBoost = boostInput && p.boostRemaining > 0 && p.speed > 1.2;
+        if (canBoost) {
+          p.isBoosting = true;
+          p.boostRemaining = Math.max(0, p.boostRemaining - 0.45);
+          s.screenShake = Math.max(s.screenShake, 1.2);
+          const boostedMax = (p.maxSpeed * 1.22) / 12;
+          p.speed = Math.min(boostedMax, p.speed + p.accel * 1.8);
+
+          // Cyan & Orange Nitro Exhaust Fire Particles
+          if (Math.random() < 0.85) {
+            s.particles.push({
+              x: (Math.random() - 0.5) * 35,
+              y: height * 0.86,
+              vx: (Math.random() - 0.5) * 4,
+              vy: 3 + Math.random() * 5,
+              size: 4 + Math.random() * 6,
+              color: Math.random() < 0.65 ? '#06b6d4' : '#f59e0b',
+              alpha: 0.95,
+              life: 16,
+              maxLife: 16
+            });
+          }
         } else {
-          p.speed = Math.max(0, p.speed - p.decel);
+          p.isBoosting = false;
+          // Passive boost regeneration over time
+          p.boostRemaining = Math.min(100, p.boostRemaining + 0.12);
+        }
+
+        // Standard Acceleration & Braking (when not boosting)
+        if (!canBoost) {
+          if (accelInput) {
+            p.speed = Math.min(p.maxSpeed / 12, p.speed + p.accel);
+          } else if (brakeInput) {
+            p.speed = Math.max(0, p.speed - p.brake);
+          } else {
+            p.speed = Math.max(0, p.speed - p.decel);
+          }
         }
 
         // Calculate speed in KM/H
         const speedKmh = Math.round((p.speed / (p.maxSpeed / 12)) * p.maxSpeed);
         setPlayerSpeedKmh(speedKmh);
+        setBoostRemaining(Math.round(p.boostRemaining));
+        setIsBoosting(p.isBoosting);
         updateEngineAudio(p.speed / (p.maxSpeed / 12), p.isDrifting);
 
         // Steering & Drift Mechanics
@@ -896,6 +969,7 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
           p.driftMultiplier = Math.min(3.0, p.driftMultiplier + 0.012);
           p.currentDriftCombo += Math.round(18 * p.driftMultiplier);
           p.driftScore += Math.round(18 * p.driftMultiplier);
+          p.boostRemaining = Math.min(100, p.boostRemaining + 0.35); // Stylish drifting refills nitro boost!
           setDriftScore(p.driftScore);
           setCurrentDriftCombo(p.currentDriftCombo);
           setDriftMultiplier(p.driftMultiplier);
@@ -1033,38 +1107,27 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         // Advance Forward on Track
         p.z += p.speed * 20;
 
-        // Checkpoint Distance Calculation (Target: CP1 @ 180, CP2 @ 320, CP3 @ 460, Finish @ 1000)
-        const nextCpSeg = p.checkpointIndex === 0 ? 180 : p.checkpointIndex === 1 ? 320 : p.checkpointIndex === 2 ? 460 : 1000;
+        // Checkpoint Distance Calculation (Target: Next CP from CHECKPOINT_SEGMENTS, or Finish @ 1000)
+        const nextCpSeg = p.checkpointIndex < CHECKPOINT_SEGMENTS.length ? CHECKPOINT_SEGMENTS[p.checkpointIndex] : 1000;
         let segDistToCp = nextCpSeg - segIdx;
         if (segDistToCp < 0) segDistToCp += s.segments.length;
         const distMeters = Math.round((segDistToCp * SEGMENT_LENGTH) / 10);
         setCheckpointDistanceMeters(distMeters);
 
-        // Checkpoint Trigger Detection
-        if (segIdx >= 180 && segIdx <= 195 && p.checkpointIndex === 0) {
-          p.checkpointIndex = 1;
-          p.totalCheckpointsPassed++;
-          p.timeRemaining = Math.min(99, p.timeRemaining + 16);
-          if (soundEnabled) sound.playPowerUp();
-          setCheckpointBanner('CHECKPOINT 01 PASSED! +16 SEC');
-          setTimeout(() => setCheckpointBanner(null), 2500);
-          setCheckpointText('01 / 03');
-        } else if (segIdx >= 320 && segIdx <= 335 && p.checkpointIndex === 1) {
-          p.checkpointIndex = 2;
-          p.totalCheckpointsPassed++;
-          p.timeRemaining = Math.min(99, p.timeRemaining + 16);
-          if (soundEnabled) sound.playPowerUp();
-          setCheckpointBanner('CHECKPOINT 02 PASSED! +16 SEC');
-          setTimeout(() => setCheckpointBanner(null), 2500);
-          setCheckpointText('02 / 03');
-        } else if (segIdx >= 460 && segIdx <= 475 && p.checkpointIndex === 2) {
-          p.checkpointIndex = 3;
-          p.totalCheckpointsPassed++;
-          p.timeRemaining = Math.min(99, p.timeRemaining + 16);
-          if (soundEnabled) sound.playPowerUp();
-          setCheckpointBanner('CHECKPOINT 03 PASSED! +16 SEC');
-          setTimeout(() => setCheckpointBanner(null), 2500);
-          setCheckpointText('03 / 03');
+        // Checkpoint Trigger Detection across all 10 Checkpoints
+        if (p.checkpointIndex < CHECKPOINT_SEGMENTS.length) {
+          const targetCpSeg = CHECKPOINT_SEGMENTS[p.checkpointIndex];
+          if (segIdx >= targetCpSeg && segIdx <= targetCpSeg + 20) {
+            p.checkpointIndex++;
+            p.totalCheckpointsPassed++;
+            p.timeRemaining = Math.min(99, p.timeRemaining + 14);
+            if (soundEnabled) sound.playPowerUp();
+            const cpStr = String(p.checkpointIndex).padStart(2, '0');
+            const totalCpStr = String(CHECKPOINT_SEGMENTS.length).padStart(2, '0');
+            setCheckpointBanner(`CHECKPOINT ${cpStr} / ${totalCpStr} PASSED! +14 SEC`);
+            setTimeout(() => setCheckpointBanner(null), 2500);
+            setCheckpointText(`${cpStr} / ${totalCpStr}`);
+          }
         }
 
         // Lap Complete Detection (Crossing Start/Finish Line at Segment 0 / 1000)
@@ -1073,7 +1136,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
           p.checkpointIndex = 0;
           p.lap++;
           setPlayerLap(p.lap);
-          setCheckpointText('00 / 03');
+          const totalCpStr = String(CHECKPOINT_SEGMENTS.length).padStart(2, '0');
+          setCheckpointText(`00 / ${totalCpStr}`);
 
           if (p.lap > selectedTrack.laps) {
             finishRace(true);
@@ -1133,9 +1197,11 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
           }
 
           ai.z += ai.speed * 20;
-          if (aiSegIdx >= 180 && ai.checkpointIndex === 0) ai.checkpointIndex = 1;
-          if (aiSegIdx >= 320 && ai.checkpointIndex === 1) ai.checkpointIndex = 2;
-          if (aiSegIdx >= 460 && ai.checkpointIndex === 2) ai.checkpointIndex = 3;
+          CHECKPOINT_SEGMENTS.forEach((cpSeg, idx) => {
+            if (aiSegIdx >= cpSeg && ai.checkpointIndex === idx) {
+              ai.checkpointIndex = idx + 1;
+            }
+          });
           if (ai.z >= s.trackLength) {
             ai.z -= s.trackLength;
             ai.checkpointIndex = 0;
@@ -1215,12 +1281,7 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         s.screenShake = Math.max(0, s.screenShake - 0.25);
       }
 
-      // Camera tilt
-      if (Math.abs(s.cameraTilt) > 0.005) {
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate(s.cameraTilt);
-        ctx.translate(-width / 2, -height / 2);
-      }
+      // Camera orientation kept rock-solid (no random screen rotation)
 
       // 5A. Sky Gradient & Desert Horizon
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.55);
@@ -1268,6 +1329,10 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       const cameraY = CAMERA_HEIGHT + p.y;
       const cameraZ = p.z;
 
+      // Subtle dynamic camera zoom-out at high speed to reveal more road ahead
+      const speedZoom = Math.min(0.09, (p.speed / 12) * 0.07);
+      const effectiveCameraDepth = CAMERA_DEPTH - speedZoom;
+
       let x = 0;
       let dx = -(baseSegment ? baseSegment.curve * playerSegmentPercent : 0);
 
@@ -1286,10 +1351,10 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
           dx += segment.curve;
           continue;
         }
-        const p1Scale = (CAMERA_DEPTH / p1WorldZ) * (height / 2);
+        const p1Scale = (effectiveCameraDepth / p1WorldZ) * (height / 2);
 
         const p2WorldZ = segment.p2.world.z + loopOffset - cameraZ;
-        const p2Scale = p2WorldZ > 0 ? (CAMERA_DEPTH / p2WorldZ) * (height / 2) : p1Scale;
+        const p2Scale = p2WorldZ > 0 ? (effectiveCameraDepth / p2WorldZ) * (height / 2) : p1Scale;
 
         segment.p1.screen = {
           x: Math.round(width / 2 + p1Scale * (x - cameraX)),
@@ -1784,6 +1849,98 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
             ctx.beginPath();
             ctx.arc(spriteX, spriteY - spriteScale * 0.08, spriteScale * 0.1, 0, Math.PI * 2);
             ctx.fill();
+          } else if (sprite.type === 'palm_tree') {
+            // Majestic Desert Oasis Palm Tree
+            const tH = spriteScale * 1.05;
+            const tW = spriteScale * 0.1;
+            // Curved trunk
+            ctx.fillStyle = '#78350f';
+            ctx.beginPath();
+            ctx.moveTo(spriteX - tW * 0.5, spriteY);
+            ctx.quadraticCurveTo(spriteX + tW * 0.8, spriteY - tH * 0.5, spriteX + tW * 0.4, spriteY - tH);
+            ctx.lineTo(spriteX + tW * 1.1, spriteY - tH);
+            ctx.quadraticCurveTo(spriteX + tW * 1.5, spriteY - tH * 0.5, spriteX + tW * 0.5, spriteY);
+            ctx.closePath();
+            ctx.fill();
+            // Palm fronds
+            const topX = spriteX + tW * 0.7;
+            const topY = spriteY - tH;
+            ctx.fillStyle = '#15803d';
+            for (let f = 0; f < 6; f++) {
+              const fAngle = (f / 6) * Math.PI * 2;
+              const frondLen = spriteScale * 0.42;
+              ctx.beginPath();
+              ctx.ellipse(
+                topX + Math.cos(fAngle) * (frondLen * 0.5),
+                topY + Math.sin(fAngle) * (frondLen * 0.25) + 3,
+                frondLen * 0.5,
+                spriteScale * 0.11,
+                fAngle,
+                0,
+                Math.PI * 2
+              );
+              ctx.fill();
+            }
+          } else if (sprite.type === 'abandoned_structure') {
+            // Weathered Desert Outpost & Fuel Station Ruins
+            const bW = spriteScale * 1.15;
+            const bH = spriteScale * 0.65;
+            ctx.fillStyle = '#713f12';
+            ctx.fillRect(spriteX - bW * 0.5, spriteY - bH, bW, bH);
+            // Rusty corrugated pitched roof
+            ctx.fillStyle = '#991b1b';
+            ctx.beginPath();
+            ctx.moveTo(spriteX - bW * 0.55, spriteY - bH);
+            ctx.lineTo(spriteX, spriteY - bH * 1.35);
+            ctx.lineTo(spriteX + bW * 0.55, spriteY - bH);
+            ctx.closePath();
+            ctx.fill();
+            // Openings
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(spriteX - bW * 0.38, spriteY - bH * 0.72, bW * 0.22, bH * 0.38);
+            ctx.fillRect(spriteX + bW * 0.1, spriteY - bH * 0.85, bW * 0.26, bH * 0.85);
+          } else if (sprite.type === 'cactus_group') {
+            // Cluster of 3 saguaro cacti
+            const heights = [0.72, 0.52, 0.4];
+            const offsets = [-0.16, 0.14, 0.0];
+            ctx.fillStyle = '#166534';
+            heights.forEach((hMul, idx) => {
+              const cW = spriteScale * 0.11;
+              const cH = spriteScale * hMul;
+              const cX = spriteX + spriteScale * offsets[idx];
+              ctx.fillRect(cX - cW * 0.5, spriteY - cH, cW, cH);
+              if (idx === 0) {
+                ctx.fillRect(cX - cW * 1.5, spriteY - cH * 0.65, cW * 1.5, cW * 0.75);
+                ctx.fillRect(cX - cW * 1.5, spriteY - cH * 0.88, cW * 0.75, cH * 0.25);
+                ctx.fillRect(cX + cW * 0.5, spriteY - cH * 0.5, cW * 1.4, cW * 0.75);
+                ctx.fillRect(cX + cW * 1.15, spriteY - cH * 0.72, cW * 0.75, cH * 0.24);
+              }
+            });
+          } else if (sprite.type === 'tire_barrier') {
+            // Heavy FIA Stacked Safety Tire Wall
+            const tbW = spriteScale * 0.56;
+            const tbH = spriteScale * 0.32;
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(spriteX - tbW * 0.5, spriteY - tbH, tbW, tbH);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(spriteX - tbW * 0.2, spriteY - tbH, tbW * 0.4, tbH);
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(spriteX - tbW * 0.5, spriteY - tbH * 0.55, tbW, tbH * 0.12);
+          } else if (sprite.type === 'warning_arrow') {
+            // High-visibility Chevron Apex Warning Arrow
+            const aW = spriteScale * 0.44;
+            const aH = spriteScale * 0.32;
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(spriteX - aW * 0.5, spriteY - aH * 1.4, aW, aH);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = Math.max(1.5, spriteScale * 0.02);
+            ctx.strokeRect(spriteX - aW * 0.5, spriteY - aH * 1.4, aW, aH);
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = `900 ${Math.max(9, Math.round(aH * 0.7))}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('➔➔', spriteX, spriteY - aH * 0.65);
+            ctx.fillStyle = '#52525b';
+            ctx.fillRect(spriteX - aW * 0.07, spriteY - aH * 0.4, aW * 0.14, aH * 0.4);
           }
         });
 
@@ -1896,10 +2053,39 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.ellipse(0, 16 + p.y, carW * 0.52 * shadowScale, 18 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Large Desert Off-Road Tires
+      // Forward Headlight Beams illuminating the asphalt ahead
+      ctx.save();
+      const beamGradL = ctx.createLinearGradient(-35, -carH * 0.6, -80, -carH * 3.5);
+      beamGradL.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+      beamGradL.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = beamGradL;
+      ctx.beginPath();
+      ctx.moveTo(-35, -carH * 0.6);
+      ctx.lineTo(-95, -carH * 3.5);
+      ctx.lineTo(-20, -carH * 3.5);
+      ctx.closePath();
+      ctx.fill();
+
+      const beamGradR = ctx.createLinearGradient(35, -carH * 0.6, 80, -carH * 3.5);
+      beamGradR.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+      beamGradR.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      ctx.fillStyle = beamGradR;
+      ctx.beginPath();
+      ctx.moveTo(35, -carH * 0.6);
+      ctx.lineTo(20, -carH * 3.5);
+      ctx.lineTo(95, -carH * 3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Large Desert Off-Road Tires with Alloy Hubs
       ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(-carW * 0.54, -20, 32, 48);
       ctx.fillRect(carW * 0.54 - 32, -20, 32, 48);
+      // Alloy wheel rims
+      ctx.fillStyle = '#71717a';
+      ctx.fillRect(-carW * 0.54 + 6, -14, 20, 36);
+      ctx.fillRect(carW * 0.54 - 26, -14, 20, 36);
 
       const steerAngle =
         s.keys.left || mobileControlsRef.current.left
@@ -1911,13 +2097,19 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.save();
       ctx.translate(-carW * 0.45, -carH * 0.6);
       ctx.rotate(steerAngle);
+      ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(-10, -18, 20, 38);
+      ctx.fillStyle = '#71717a';
+      ctx.fillRect(-6, -12, 12, 26);
       ctx.restore();
 
       ctx.save();
       ctx.translate(carW * 0.45, -carH * 0.6);
       ctx.rotate(steerAngle);
+      ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(-10, -18, 20, 38);
+      ctx.fillStyle = '#71717a';
+      ctx.fillRect(-6, -12, 12, 26);
       ctx.restore();
 
       // Main Off-road Chassis
@@ -1955,8 +2147,24 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.fillRect(carW * 0.38 - 36, -carH * 0.12, 36, 13);
       ctx.shadowBlur = 0;
 
-      // Exhaust Boost Flames (Twin fiery exhaust blasts)
-      if (s.keys.up || mobileControlsRef.current.accel) {
+      // Exhaust Boost Flames (Twin fiery exhaust blasts or Mega Nitro Jets)
+      if (p.isBoosting) {
+        // High-velocity Cyan/Blue Nitro Blast with White Core
+        ctx.fillStyle = '#00f0ff';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 26;
+        ctx.beginPath();
+        ctx.ellipse(-26, 24, 9, 28 + Math.random() * 16, 0, 0, Math.PI * 2);
+        ctx.ellipse(26, 24, 9, 28 + Math.random() * 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(-26, 18, 4, 14 + Math.random() * 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(26, 18, 4, 14 + Math.random() * 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else if (s.keys.up || mobileControlsRef.current.accel) {
         ctx.fillStyle = '#f59e0b';
         ctx.shadowColor = '#f59e0b';
         ctx.shadowBlur = 16;
@@ -2037,12 +2245,13 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
   };
 
   // Virtual Touch Input Handler
-  const handleInputPress = (key: 'left' | 'right' | 'up' | 'down' | 'drift', pressed: boolean) => {
+  const handleInputPress = (key: 'left' | 'right' | 'up' | 'down' | 'drift' | 'boost', pressed: boolean) => {
     if (key === 'left') mobileControlsRef.current.left = pressed;
     if (key === 'right') mobileControlsRef.current.right = pressed;
     if (key === 'up') mobileControlsRef.current.accel = pressed;
     if (key === 'down') mobileControlsRef.current.brake = pressed;
     if (key === 'drift') mobileControlsRef.current.drift = pressed;
+    if (key === 'boost') mobileControlsRef.current.boost = pressed;
   };
 
   const currentTier = carUpgrades[selectedCar.id] || 0;
@@ -2662,6 +2871,23 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
                         />
                       </div>
                     </div>
+
+                    {/* NITRO BOOST */}
+                    <div>
+                      <div className="flex justify-between mb-1 text-neutral-300 text-[11px]">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                          <span>NITRO BOOST</span>
+                        </span>
+                        <span className="font-bold text-cyan-400">{currentEffective.stats.boost || 85}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 rounded-full transition-all duration-300 shadow-sm shadow-cyan-400/50"
+                          style={{ width: `${currentEffective.stats.boost || 85}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -2752,12 +2978,15 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
           bestTimeFormatted={bestTimeFormatted}
           trackProgress={trackProgress}
           aiProgressList={aiProgressList}
+          checkpointText={checkpointText}
           checkpointDistanceMeters={checkpointDistanceMeters}
           checkpointBanner={checkpointBanner}
           driftScore={driftScore}
           currentDriftCombo={currentDriftCombo}
           driftMultiplier={driftMultiplier}
           isDrifting={isDrifting}
+          boostRemaining={boostRemaining}
+          isBoosting={isBoosting}
           countdownVal={countdownVal}
           isStarting={gameState === 'COUNTDOWN'}
           isMuted={!soundEnabled || sound.getIsMuted()}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Pause, Volume2, VolumeX, Maximize2, Minimize2, 
-  Flag, Zap, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Timer, Trophy
+  Flag, Zap, Flame, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Timer, Trophy
 } from 'lucide-react';
 import { TrackMinimap } from './TrackMinimap';
 import { CircularSpeedometer } from './CircularSpeedometer';
@@ -17,12 +17,15 @@ interface DesertRacerHUDProps {
   bestTimeFormatted: string;
   trackProgress: number; // 0 to 1
   aiProgressList: { id: number; progress: number; color: string; name?: string }[];
+  checkpointText?: string;
   checkpointDistanceMeters?: number | null;
   checkpointBanner?: string | null;
   driftScore: number;
   currentDriftCombo: number;
   driftMultiplier: number;
   isDrifting: boolean;
+  boostRemaining?: number;
+  isBoosting?: boolean;
   countdownVal: '3' | '2' | '1' | 'GO!' | '';
   isStarting: boolean;
   isMuted: boolean;
@@ -30,7 +33,7 @@ interface DesertRacerHUDProps {
   onToggleMute: () => void;
   onToggleFullscreen: () => void;
   onPause: () => void;
-  onInputPress: (key: 'left' | 'right' | 'up' | 'down' | 'drift', pressed: boolean) => void;
+  onInputPress: (key: 'left' | 'right' | 'up' | 'down' | 'drift' | 'boost', pressed: boolean) => void;
   isMobile: boolean;
   trackName?: string;
 }
@@ -46,11 +49,14 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
   bestTimeFormatted,
   trackProgress,
   aiProgressList,
+  checkpointText,
   checkpointBanner,
   driftScore,
   currentDriftCombo,
   driftMultiplier,
   isDrifting,
+  boostRemaining = 100,
+  isBoosting = false,
   countdownVal,
   isStarting,
   isMuted,
@@ -129,45 +135,68 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           TOP HUD BAR:
-          LEFT: POSITION 01/05 • LAP 01/03
+          LEFT: DESERT RACER • POSITION 01/05 • LAP 01/03
           CENTER: LARGE HORIZONTAL RACE PROGRESS BAR
           RIGHT: TIME 00:42.58 • BEST 00:39.21
           CORNER: PAUSE • SOUND • FULLSCREEN
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <div className="w-full flex items-start justify-between gap-2 sm:gap-4 pointer-events-none">
         
-        {/* ── TOP LEFT: POSITION & LAP ── */}
+        {/* ── TOP LEFT: DESERT RACER • POSITION & LAP ── */}
         <div className="flex flex-col gap-1.5 pointer-events-auto">
-          <div className="px-3.5 py-2.5 rounded-2xl bg-neutral-950/90 border border-white/15 backdrop-blur-2xl shadow-2xl flex items-center gap-3 sm:gap-4">
-            {/* POSITION */}
-            <div className="flex flex-col">
-              <span className="text-[9px] font-mono font-black uppercase tracking-wider text-neutral-400">
-                POSITION
+          <div className="px-3.5 py-2.5 rounded-2xl bg-neutral-950/90 border border-white/15 backdrop-blur-2xl shadow-2xl flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 border-b border-white/10 pb-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-[11px] font-mono font-black tracking-wider text-white">
+                DESERT <span className="text-amber-400">RACER</span>
               </span>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display font-black text-2xl sm:text-3xl italic text-amber-400 leading-none">
-                  {padNumber(position)}
-                </span>
-                <span className="text-xs font-mono font-bold text-neutral-400">
-                  / {padNumber(totalRacers)}
-                </span>
-              </div>
             </div>
 
-            <div className="w-px h-8 bg-white/15" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              {/* POSITION */}
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono font-black uppercase tracking-wider text-neutral-400">
+                  POSITION
+                </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display font-black text-2xl sm:text-3xl italic text-amber-400 leading-none">
+                    {padNumber(position)}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-neutral-400">
+                    / {padNumber(totalRacers)}
+                  </span>
+                </div>
+              </div>
 
-            {/* LAP */}
-            <div className="flex flex-col">
-              <span className="text-[9px] font-mono font-black uppercase tracking-wider text-neutral-400">
-                LAP
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display font-black text-2xl sm:text-3xl italic text-white leading-none">
-                  {padNumber(Math.min(lap, totalLaps))}
+              <div className="w-px h-8 bg-white/15" />
+
+              {/* LAP */}
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono font-black uppercase tracking-wider text-neutral-400">
+                  LAP
                 </span>
-                <span className="text-xs font-mono font-bold text-neutral-400">
-                  / {padNumber(totalLaps)}
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display font-black text-2xl sm:text-3xl italic text-white leading-none">
+                    {padNumber(Math.min(lap, totalLaps))}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-neutral-400">
+                    / {padNumber(totalLaps)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="w-px h-8 bg-white/15" />
+
+              {/* CHECKPOINT */}
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono font-black uppercase tracking-wider text-neutral-400">
+                  CHECKPOINT
                 </span>
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display font-black text-2xl sm:text-3xl italic text-amber-300 leading-none">
+                    {checkpointText || '00 / 10'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -208,9 +237,9 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
                 style={{ width: `${Math.min(100, Math.max(2, trackProgress * 100))}%` }}
               />
 
-              {/* AI 1, AI 2, AI 3 Competitors */}
-              {aiProgressList.slice(0, 3).map((ai, index) => {
-                const label = aiLabels[ai.id] || `AI ${index + 1}`;
+              {/* AI Competitors along track */}
+              {aiProgressList.map((ai, index) => {
+                const label = ai.name || aiLabels[ai.id] || `AI ${index + 1}`;
                 const leftPercent = Math.min(97, Math.max(3, ai.progress * 100));
 
                 return (
@@ -322,7 +351,7 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
           BOTTOM LEFT: TRACK MINIMAP
           BOTTOM RIGHT: CIRCULAR SPEEDOMETER + DRIFT BADGE
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <div className="w-full flex items-end justify-between gap-3 pointer-events-none pb-1">
+      <div className={`w-full flex items-end justify-between gap-3 pointer-events-none transition-all ${isMobile ? 'pb-18 sm:pb-20' : 'pb-1'}`}>
         {/* BOTTOM LEFT: MINIMAP OF RACING TRACK */}
         <div className="pointer-events-auto">
           <TrackMinimap
@@ -342,6 +371,8 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
             isDrifting={isDrifting}
             currentDriftCombo={currentDriftCombo}
             driftMultiplier={driftMultiplier}
+            boostRemaining={boostRemaining}
+            isBoosting={isBoosting}
           />
         </div>
       </div>
@@ -366,7 +397,7 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
                 e.preventDefault();
                 onInputPress('left', false);
               }}
-              className="w-14 h-14 rounded-2xl bg-neutral-950/75 active:bg-amber-500/40 border border-white/20 active:border-amber-400 text-white backdrop-blur-md flex items-center justify-center shadow-2xl touch-none cursor-pointer"
+              className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-neutral-950/85 active:bg-amber-500/40 border border-white/20 active:border-amber-400 text-white backdrop-blur-md flex items-center justify-center shadow-2xl touch-none cursor-pointer"
               aria-label="Steer Left"
             >
               <ChevronLeft className="w-7 h-7 text-amber-400" />
@@ -385,15 +416,41 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
                 e.preventDefault();
                 onInputPress('right', false);
               }}
-              className="w-14 h-14 rounded-2xl bg-neutral-950/75 active:bg-amber-500/40 border border-white/20 active:border-amber-400 text-white backdrop-blur-md flex items-center justify-center shadow-2xl touch-none cursor-pointer"
+              className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-neutral-950/85 active:bg-amber-500/40 border border-white/20 active:border-amber-400 text-white backdrop-blur-md flex items-center justify-center shadow-2xl touch-none cursor-pointer"
               aria-label="Steer Right"
             >
               <ChevronRight className="w-7 h-7 text-amber-400" />
             </button>
           </div>
 
-          {/* Drift, Brake, Gas */}
-          <div className="flex items-end gap-2 pointer-events-auto">
+          {/* Boost, Drift, Brake, Gas */}
+          <div className="flex items-end gap-1.5 sm:gap-2 pointer-events-auto">
+            {/* BOOST BUTTON */}
+            <button
+              onPointerDown={e => {
+                e.preventDefault();
+                onInputPress('boost', true);
+              }}
+              onPointerUp={e => {
+                e.preventDefault();
+                onInputPress('boost', false);
+              }}
+              onPointerCancel={e => {
+                e.preventDefault();
+                onInputPress('boost', false);
+              }}
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl backdrop-blur-md flex flex-col items-center justify-center font-mono font-black text-[9px] sm:text-[10px] shadow-2xl touch-none cursor-pointer transition-colors border ${
+                isBoosting
+                  ? 'bg-cyan-500/50 border-cyan-300 text-cyan-200 shadow-[0_0_15px_#06b6d4]'
+                  : 'bg-neutral-950/85 active:bg-cyan-500/40 border-cyan-400/40 text-cyan-300'
+              }`}
+              aria-label="Boost Nitro"
+            >
+              <Flame className="w-3.5 h-3.5 mb-0.5 text-cyan-400" />
+              <span>BOOST</span>
+            </button>
+
+            {/* DRIFT BUTTON */}
             <button
               onPointerDown={e => {
                 e.preventDefault();
@@ -407,13 +464,14 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
                 e.preventDefault();
                 onInputPress('drift', false);
               }}
-              className="w-12 h-12 rounded-2xl bg-neutral-950/75 active:bg-cyan-500/40 border border-cyan-400/40 text-cyan-300 backdrop-blur-md flex flex-col items-center justify-center font-mono font-black text-[10px] shadow-2xl touch-none cursor-pointer"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-neutral-950/85 active:bg-amber-500/40 border border-amber-400/40 text-amber-300 backdrop-blur-md flex flex-col items-center justify-center font-mono font-black text-[9px] sm:text-[10px] shadow-2xl touch-none cursor-pointer"
               aria-label="Drift"
             >
               <Zap className="w-3.5 h-3.5 mb-0.5" />
               <span>DRIFT</span>
             </button>
 
+            {/* BRAKE BUTTON */}
             <button
               onPointerDown={e => {
                 e.preventDefault();
@@ -427,13 +485,14 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
                 e.preventDefault();
                 onInputPress('down', false);
               }}
-              className="w-12 h-14 rounded-2xl bg-neutral-950/75 active:bg-red-500/40 border border-red-500/40 text-red-300 backdrop-blur-md flex flex-col items-center justify-center shadow-2xl touch-none cursor-pointer"
+              className="w-11 h-13 sm:w-12 sm:h-14 rounded-2xl bg-neutral-950/85 active:bg-red-500/40 border border-red-500/40 text-red-300 backdrop-blur-md flex flex-col items-center justify-center shadow-2xl touch-none cursor-pointer"
               aria-label="Brake"
             >
-              <ArrowDown className="w-5 h-5" />
-              <span className="text-[9px] font-mono font-bold">BRAKE</span>
+              <ArrowDown className="w-4.5 h-4.5" />
+              <span className="text-[8px] sm:text-[9px] font-mono font-bold">BRAKE</span>
             </button>
 
+            {/* GAS BUTTON */}
             <button
               onPointerDown={e => {
                 e.preventDefault();
@@ -447,11 +506,11 @@ export const DesertRacerHUD: React.FC<DesertRacerHUDProps> = ({
                 e.preventDefault();
                 onInputPress('up', false);
               }}
-              className="w-16 h-18 rounded-2xl bg-amber-500/30 active:bg-amber-500/60 border-2 border-amber-400 text-amber-300 backdrop-blur-md flex flex-col items-center justify-center shadow-2xl shadow-amber-500/30 touch-none cursor-pointer"
+              className="w-15 h-16 sm:w-16 sm:h-18 rounded-2xl bg-amber-500/35 active:bg-amber-500/65 border-2 border-amber-400 text-amber-300 backdrop-blur-md flex flex-col items-center justify-center shadow-2xl shadow-amber-500/30 touch-none cursor-pointer"
               aria-label="Accelerate"
             >
-              <ArrowUp className="w-6 h-6 text-amber-300 mb-0.5" />
-              <span className="text-[10px] font-mono font-black tracking-wider text-amber-200">GAS</span>
+              <ArrowUp className="w-5.5 h-5.5 text-amber-300 mb-0.5" />
+              <span className="text-[9px] sm:text-[10px] font-mono font-black tracking-wider text-amber-200">GAS</span>
             </button>
           </div>
         </div>

@@ -9,6 +9,7 @@ export interface CarStats {
   accel: number;
   handling: number;
   drift: number;
+  boost: number;
   braking: number;
   durability: number;
 }
@@ -57,9 +58,14 @@ export interface Segment {
   sprites: {
     type:
       | 'cactus'
+      | 'cactus_group'
+      | 'palm_tree'
+      | 'abandoned_structure'
       | 'rock'
       | 'mesa'
       | 'barrier'
+      | 'tire_barrier'
+      | 'warning_arrow'
       | 'sign_left'
       | 'sign_right'
       | 'sign_hairpin'
@@ -134,7 +140,7 @@ export const CARS: CarModel[] = [
     color: '#f59e0b', // Warm Amber Gold
     accentColor: '#fbbf24',
     stripeColor: '#1e293b',
-    stats: { speed: 78, accel: 82, handling: 85, drift: 80, braking: 84, durability: 82 }
+    stats: { speed: 78, accel: 82, handling: 85, drift: 80, boost: 82, braking: 84, durability: 82 }
   },
   {
     id: 'sandstorm-gt',
@@ -149,7 +155,7 @@ export const CARS: CarModel[] = [
     color: '#06b6d4', // Cyan Neon Metallic
     accentColor: '#38bdf8',
     stripeColor: '#0f172a',
-    stats: { speed: 95, accel: 88, handling: 72, drift: 70, braking: 78, durability: 70 }
+    stats: { speed: 95, accel: 88, handling: 72, drift: 70, boost: 94, braking: 78, durability: 70 }
   },
   {
     id: 'apex-buggy',
@@ -164,7 +170,7 @@ export const CARS: CarModel[] = [
     color: '#ef4444', // Crimson Red
     accentColor: '#f87171',
     stripeColor: '#ffffff',
-    stats: { speed: 72, accel: 90, handling: 95, drift: 96, braking: 92, durability: 65 }
+    stats: { speed: 72, accel: 90, handling: 95, drift: 96, boost: 80, braking: 92, durability: 65 }
   },
   {
     id: 'titan-4x4',
@@ -179,7 +185,7 @@ export const CARS: CarModel[] = [
     color: '#8b5cf6', // Titanium Purple
     accentColor: '#a78bfa',
     stripeColor: '#f59e0b',
-    stats: { speed: 82, accel: 84, handling: 78, drift: 82, braking: 88, durability: 96 }
+    stats: { speed: 82, accel: 84, handling: 78, drift: 82, boost: 86, braking: 88, durability: 96 }
   },
   {
     id: 'cyber-phantom',
@@ -194,7 +200,7 @@ export const CARS: CarModel[] = [
     color: '#10b981', // Emerald Carbon
     accentColor: '#34d399',
     stripeColor: '#000000',
-    stats: { speed: 96, accel: 92, handling: 84, drift: 88, braking: 90, durability: 88 }
+    stats: { speed: 96, accel: 92, handling: 84, drift: 88, boost: 98, braking: 90, durability: 88 }
   }
 ];
 
@@ -207,7 +213,7 @@ export const TRACKS: RaceTrack[] = [
     difficulty: 'EASY',
     distanceKm: 3.2,
     laps: 3,
-    checkpointsPerLap: 3,
+    checkpointsPerLap: 10,
     timeLimitSec: 65,
     curveFrequency: 0.35,
     hillFrequency: 0.3,
@@ -226,7 +232,7 @@ export const TRACKS: RaceTrack[] = [
     difficulty: 'NORMAL',
     distanceKm: 4.0,
     laps: 3,
-    checkpointsPerLap: 3,
+    checkpointsPerLap: 10,
     timeLimitSec: 60,
     curveFrequency: 0.55,
     hillFrequency: 0.5,
@@ -245,7 +251,7 @@ export const TRACKS: RaceTrack[] = [
     difficulty: 'HARD',
     distanceKm: 4.8,
     laps: 3,
-    checkpointsPerLap: 3,
+    checkpointsPerLap: 10,
     timeLimitSec: 55,
     curveFrequency: 0.75,
     hillFrequency: 0.65,
@@ -264,7 +270,7 @@ export const TRACKS: RaceTrack[] = [
     difficulty: 'EXPERT',
     distanceKm: 5.5,
     laps: 3,
-    checkpointsPerLap: 3,
+    checkpointsPerLap: 10,
     timeLimitSec: 50,
     curveFrequency: 0.9,
     hillFrequency: 0.8,
