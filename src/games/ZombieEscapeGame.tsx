@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import confetti from 'canvas-confetti';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import {
   Play,
   RotateCcw,
@@ -799,23 +800,18 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         return;
       }
 
+      if (isUpKey(e)) eng.keys.forward = true;
+      if (isDownKey(e)) eng.keys.backward = true;
+      if (isLeftKey(e)) {
+        eng.keys.left = true;
+        eng.keys.right = false;
+      }
+      if (isRightKey(e)) {
+        eng.keys.right = true;
+        eng.keys.left = false;
+      }
+
       switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          eng.keys.forward = true;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          eng.keys.backward = true;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          eng.keys.left = true;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          eng.keys.right = true;
-          break;
         case 'KeyR':
           startReload();
           break;
@@ -831,24 +827,10 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          eng.keys.forward = false;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          eng.keys.backward = false;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          eng.keys.left = false;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          eng.keys.right = false;
-          break;
-      }
+      if (isUpKey(e)) eng.keys.forward = false;
+      if (isDownKey(e)) eng.keys.backward = false;
+      if (isLeftKey(e)) eng.keys.left = false;
+      if (isRightKey(e)) eng.keys.right = false;
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -1167,9 +1149,9 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           const normX = inputX / moveLen;
           const normZ = inputZ / moveLen;
 
-          const forwardX = Math.sin(eng.cameraYaw);
+          const forwardX = -Math.sin(eng.cameraYaw);
           const forwardZ = Math.cos(eng.cameraYaw);
-          const rightX = Math.cos(eng.cameraYaw);
+          const rightX = -Math.cos(eng.cameraYaw);
           const rightZ = -Math.sin(eng.cameraYaw);
 
           const worldMoveX = forwardX * normZ + rightX * normX;
@@ -1213,7 +1195,8 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         }
 
         // Player model smoothly faces camera yaw (aim direction)
-        let diff = eng.cameraYaw - eng.playerRotY;
+        const targetPlayerRotY = -eng.cameraYaw;
+        let diff = targetPlayerRotY - eng.playerRotY;
         while (diff < -Math.PI) diff += Math.PI * 2;
         while (diff > Math.PI) diff -= Math.PI * 2;
         eng.playerRotY += diff * Math.min(delta * 18, 1);
@@ -1236,9 +1219,9 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         const cosPitch = Math.cos(eng.cameraPitch);
         const sinPitch = Math.sin(eng.cameraPitch);
 
-        const forwardX = Math.sin(eng.cameraYaw);
+        const forwardX = -Math.sin(eng.cameraYaw);
         const forwardZ = Math.cos(eng.cameraYaw);
-        const rightX = Math.cos(eng.cameraYaw);
+        const rightX = -Math.cos(eng.cameraYaw);
         const rightZ = -Math.sin(eng.cameraYaw);
 
         const lookDirX = forwardX * cosPitch;

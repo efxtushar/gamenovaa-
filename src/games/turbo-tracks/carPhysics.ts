@@ -47,7 +47,8 @@ export class TurboPhysicsEngine {
     player: RacerState,
     input: InputState,
     delta: number,
-    onStunt: (notice: StuntScoreNotice) => void
+    onStunt: (notice: StuntScoreNotice) => void,
+    onFall?: () => void
   ) {
     const car = player.carConfig;
 
@@ -131,7 +132,12 @@ export class TurboPhysicsEngine {
       const speedFactor = THREE.MathUtils.clamp(1.2 - (currentSpeed / 140) * 0.45, 0.62, 1.25);
       const handlingBonus = 0.85 + (car.handling / 10) * 0.3;
       const maxSteerAngle = 0.34 * speedFactor * handlingBonus; // in radians (~19 degrees)
-      const targetSteerAngle = effectiveSteerInput * maxSteerAngle;
+      // Coordinate System Compensation:
+      // In Three.js world coordinates when facing +Z with the chase camera positioned behind,
+      // +X is screen LEFT and -X is screen RIGHT.
+      // Left steering input (rawSteerInput = -1.0) maps to a positive rotation (+X = LEFT),
+      // and right steering input (rawSteerInput = +1.0) maps to a negative rotation (-X = RIGHT).
+      const targetSteerAngle = -effectiveSteerInput * maxSteerAngle;
 
       // Steering interpolation:
       // Responsive entry into turns, natural smooth self-centering without snapping
@@ -146,7 +152,7 @@ export class TurboPhysicsEngine {
       // Drift handling:
       if (input.drift && currentSpeed > 28 && effectiveSteerInput !== 0) {
         player.isDrifting = true;
-        const targetDrift = effectiveSteerInput * (0.26 + (car.handling / 10) * 0.08);
+        const targetDrift = -effectiveSteerInput * (0.26 + (car.handling / 10) * 0.08);
         player.driftValue = THREE.MathUtils.damp(player.driftValue || 0, targetDrift, 5.0, delta);
         player.boostReserve = Math.min(100, player.boostReserve + delta * 20);
       } else {
@@ -156,17 +162,17 @@ export class TurboPhysicsEngine {
 
       // -----------------------------------------------------------
       // CAR HEADING (YAW RELATIVE TO TRACK)
-      // Steer Left -> player.headingAngle < 0 (nose progressively left)
-      // Steer Right -> player.headingAngle > 0 (nose progressively right)
-      // Release -> smoothly stabilizes back to 0 (neutral parallel)
-      // Scale with motion speed so stationary car does not twist in place
+      // Steer Left (A / ArrowLeft)  -> player.headingAngle < 0 (car nose rotates LEFT)
+      // Steer Right (D / ArrowRight) -> player.headingAngle > 0 (car nose rotates RIGHT)
+      // Release -> smoothly stabilizes back to 0 (neutral parallel with track)
+      // Forward vector directly follows heading so car travels through curve
       // -----------------------------------------------------------
-      const speedHeadingScale = Math.min(1.0, currentSpeed / 6.0);
-      const targetHeading = ((player.steerAngle || 0) + (player.isDrifting ? (player.driftValue || 0) : 0)) * speedHeadingScale;
+      const steerInfluence = 0.92;
+      const targetHeading = ((player.steerAngle || 0) * steerInfluence) + (player.isDrifting ? (player.driftValue || 0) : 0);
       player.headingAngle = THREE.MathUtils.damp(
         player.headingAngle || 0,
         targetHeading,
-        8.5,
+        12.0,
         delta
       );
 
@@ -196,18 +202,34 @@ export class TurboPhysicsEngine {
       const lateralSpeed = speedMs * Math.sin(player.headingAngle || 0);
       player.steer = (player.steer || 0) + lateralSpeed * delta;
 
+      const carUp = frame.normal.clone();
+      const carForward = frame.tangent.clone().applyAxisAngle(carUp, player.headingAngle || 0).normalize();
+      const carRight = new THREE.Vector3().crossVectors(carUp, carForward).normalize();
+
       // Guardrail collision: bounce/glide smoothly along track borders
       const maxLateral = (this.track.trackWidth / 2) - 0.65;
-      if (player.steer > maxLateral) {
-        player.steer = maxLateral;
-        player.headingAngle = Math.min(0, (player.headingAngle || 0) * 0.4);
-        player.steerAngle = Math.min(0, (player.steerAngle || 0) * 0.4);
-        player.speedKmH *= 0.94;
-      } else if (player.steer < -maxLateral) {
-        player.steer = -maxLateral;
-        player.headingAngle = Math.max(0, (player.headingAngle || 0) * 0.4);
-        player.steerAngle = Math.max(0, (player.steerAngle || 0) * 0.4);
-        player.speedKmH *= 0.94;
+      if (Math.abs(player.steer) > maxLateral) {
+        // If moving at high speed and steering hard into the rail: vault over rail into air!
+        if (player.speedKmH > 85 && Math.abs(player.headingAngle || 0) > 0.45) {
+          player.isAirborne = true;
+          player.airTimeSeconds = 0;
+          const launchSpeed = (player.speedKmH * 1000) / 3600;
+          player.vel.copy(carForward).multiplyScalar(launchSpeed * 0.9);
+          const outDir = player.steer > 0 ? 1 : -1;
+          player.vel.addScaledVector(frame.binormal, outDir * 6.0);
+          player.vel.y = 4.0;
+          turboAudio.playCrash();
+        } else {
+          // Normal wall collision: bounce off and slow down (safe crash protection)
+          player.steer = maxLateral * Math.sign(player.steer);
+          player.headingAngle = Math.sign(player.steer) > 0 
+            ? Math.min(0, (player.headingAngle || 0) * 0.4) 
+            : Math.max(0, (player.headingAngle || 0) * 0.4);
+          player.steerAngle = Math.sign(player.steer) > 0 
+            ? Math.min(0, (player.steerAngle || 0) * 0.4) 
+            : Math.max(0, (player.steerAngle || 0) * 0.4);
+          player.speedKmH *= 0.94;
+        }
       }
 
       // -----------------------------------------------------------
@@ -218,15 +240,6 @@ export class TurboPhysicsEngine {
       player.pos.copy(frame.pos)
         .addScaledVector(frame.binormal, player.steer)
         .addScaledVector(frame.normal, 0.35);
-
-      const carUp = frame.normal.clone();
-
-      // Heading rotation:
-      // Rotating frame.tangent around carUp by player.headingAngle:
-      // headingAngle < 0 rotates nose towards -frame.binormal (Left)
-      // headingAngle > 0 rotates nose towards +frame.binormal (Right)
-      const carForward = frame.tangent.clone().applyAxisAngle(carUp, player.headingAngle || 0).normalize();
-      const carRight = new THREE.Vector3().crossVectors(carUp, carForward).normalize();
 
       const rotMatrix = new THREE.Matrix4().makeBasis(carRight, carUp, carForward);
       const targetQuat = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
@@ -261,14 +274,14 @@ export class TurboPhysicsEngine {
 
       // Check Jump Ramps
       for (const jump of this.track.jumpRamps) {
-        if (Math.abs(jump.t - player.trackProgress) < 0.016 && player.speedKmH > 45) {
+        if (Math.abs(jump.t - player.trackProgress) < 0.016) {
           player.isAirborne = true;
           player.airTimeSeconds = 0;
           player.airFlipAccum = 0;
           player.airRollAccum = 0;
-          const launchSpeed = (player.speedKmH * 1000) / 3600;
+          const launchSpeed = (Math.max(15, player.speedKmH) * 1000) / 3600;
           player.vel.copy(carForward).multiplyScalar(launchSpeed * 0.95);
-          player.vel.y = 15.5;
+          player.vel.y = player.speedKmH > 45 ? 15.5 : 4.0;
           turboAudio.playJump();
           break;
         }
@@ -353,6 +366,18 @@ export class TurboPhysicsEngine {
           });
         }
         player.airTimeSeconds = 0;
+      } else {
+        // Fall detection check when airborne
+        const currentTrackFrame = this.track.getFrameAt(player.trackProgress);
+        const isBelowTrack = player.pos.y < currentTrackFrame.pos.y - 4.5 && player.vel.y < -3.0;
+        const isBelowWorldFloor = player.pos.y < 0.8;
+        const isTooFarOffTrack = distSq > 30.0 * 30.0;
+        const isPlungingAirborne = player.airTimeSeconds > 2.8 && player.vel.y < -6.0;
+
+        if (isBelowTrack || isBelowWorldFloor || isTooFarOffTrack || isPlungingAirborne) {
+          onFall?.();
+          return;
+        }
       }
     }
 

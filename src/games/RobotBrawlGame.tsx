@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Swords, Shield, Zap, Flame } from 'lucide-react';
 
@@ -202,7 +203,7 @@ export const RobotBrawlGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
       if (['KeyJ', 'KeyZ', 'Digit1'].includes(e.code)) punch('jab');
       if (['KeyK', 'KeyX', 'Digit2'].includes(e.code)) punch('uppercut');
       if (['KeyL', 'KeyC', 'Digit3'].includes(e.code)) punch('slam');
-      if (['Space', 'ShiftLeft', 'KeyS'].includes(e.code)) {
+      if (['Space', 'ShiftLeft'].includes(e.code) || isDownKey(e)) {
         e.preventDefault();
         guard(true);
       }
@@ -210,7 +211,7 @@ export const RobotBrawlGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['Space', 'ShiftLeft', 'KeyS'].includes(e.code)) guard(false);
+      if (['Space', 'ShiftLeft'].includes(e.code) || isDownKey(e)) guard(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);

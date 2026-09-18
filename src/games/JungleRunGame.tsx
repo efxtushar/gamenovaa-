@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { 
   Play, RotateCcw, Trophy, Compass, Sparkles, Volume2, VolumeX, 
@@ -326,13 +327,13 @@ export const JungleRunGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
 
       if (gameState !== 'PLAYING') return;
 
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) {
+      if (isLeftKey(e)) {
         moveLeft();
-      } else if (['ArrowRight', 'KeyD'].includes(e.code)) {
+      } else if (isRightKey(e)) {
         moveRight();
-      } else if (['ArrowUp', 'KeyW', 'Space'].includes(e.code)) {
+      } else if (isUpKey(e) || e.code === 'Space') {
         jump();
-      } else if (['ArrowDown', 'KeyS'].includes(e.code)) {
+      } else if (isDownKey(e)) {
         slide();
       }
     };

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Sparkles } from 'lucide-react';
 
@@ -17,7 +18,7 @@ export const SpaceMinerGame: React.FC<GameProps> = ({ onGameOver }) => {
   });
 
   const stateRef = useRef({
-    ship: { x: 300, y: 240, vx: 0, vy: 0, angle: 0, isMining: false },
+    ship: { x: 300, y: 240, vx: 0, vy: 0, angle: -Math.PI / 2, isMining: false },
     asteroids: [] as { x: number; y: number; r: number; ore: number; maxOre: number; color: string }[],
     crystals: [] as { x: number; y: number; val: number }[],
     baseStation: { x: 80, y: 80, r: 40 },
@@ -37,7 +38,7 @@ export const SpaceMinerGame: React.FC<GameProps> = ({ onGameOver }) => {
     ];
 
     stateRef.current = {
-      ship: { x: 300, y: 240, vx: 0, vy: 0, angle: 0, isMining: false },
+      ship: { x: 300, y: 240, vx: 0, vy: 0, angle: -Math.PI / 2, isMining: false },
       asteroids,
       crystals: [],
       baseStation: { x: 80, y: 80, r: 40 },
@@ -65,22 +66,30 @@ export const SpaceMinerGame: React.FC<GameProps> = ({ onGameOver }) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = true;
-      if (['ArrowUp', 'KeyW'].includes(e.code)) stateRef.current.keys.up = true;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) stateRef.current.keys.down = true;
+      const k = stateRef.current.keys;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
+      if (isUpKey(e)) k.up = true;
+      if (isDownKey(e)) k.down = true;
       if (['Space', 'KeyJ'].includes(e.code)) {
         e.preventDefault();
-        stateRef.current.keys.mine = true;
+        k.mine = true;
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = false;
-      if (['ArrowUp', 'KeyW'].includes(e.code)) stateRef.current.keys.up = false;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) stateRef.current.keys.down = false;
-      if (['Space', 'KeyJ'].includes(e.code)) stateRef.current.keys.mine = false;
+      const k = stateRef.current.keys;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
+      if (isUpKey(e)) k.up = false;
+      if (isDownKey(e)) k.down = false;
+      if (['Space', 'KeyJ'].includes(e.code)) k.mine = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

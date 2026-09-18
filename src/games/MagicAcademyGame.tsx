@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Wand2, Sparkles, Trophy, Shield, Zap, Flame, Snowflake, BookOpen } from 'lucide-react';
 
@@ -175,9 +176,16 @@ export const MagicAcademyGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
   // Key controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = true;
-      if (['Space', 'KeyW', 'ArrowUp', 'KeyJ'].includes(e.code)) {
+      const k = stateRef.current.keys;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
+      if (isUpKey(e) || ['Space', 'KeyJ'].includes(e.code)) {
         e.preventDefault();
         castSpell();
       }
@@ -204,8 +212,9 @@ export const MagicAcademyGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = false;
+      const k = stateRef.current.keys;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

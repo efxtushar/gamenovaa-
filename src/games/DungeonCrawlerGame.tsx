@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Key, Heart } from 'lucide-react';
 
@@ -99,10 +100,17 @@ export const DungeonCrawlerGame: React.FC<GameProps> = ({ onGameOver }) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.controlKeys.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.controlKeys.right = true;
-      if (['ArrowUp', 'KeyW'].includes(e.code)) stateRef.current.controlKeys.up = true;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) stateRef.current.controlKeys.down = true;
+      const k = stateRef.current.controlKeys;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
+      if (isUpKey(e)) k.up = true;
+      if (isDownKey(e)) k.down = true;
       if (['Space', 'KeyJ'].includes(e.code)) {
         e.preventDefault();
         attack();
@@ -110,10 +118,11 @@ export const DungeonCrawlerGame: React.FC<GameProps> = ({ onGameOver }) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.controlKeys.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.controlKeys.right = false;
-      if (['ArrowUp', 'KeyW'].includes(e.code)) stateRef.current.controlKeys.up = false;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) stateRef.current.controlKeys.down = false;
+      const k = stateRef.current.controlKeys;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
+      if (isUpKey(e)) k.up = false;
+      if (isDownKey(e)) k.down = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

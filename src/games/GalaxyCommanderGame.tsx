@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import {
   Play,
@@ -641,10 +642,16 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const s = simRef.current;
-      if (['KeyW', 'ArrowUp'].includes(e.code)) s.keys.up = true;
-      if (['KeyS', 'ArrowDown'].includes(e.code)) s.keys.down = true;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) s.keys.left = true;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) s.keys.right = true;
+      if (isUpKey(e)) s.keys.up = true;
+      if (isDownKey(e)) s.keys.down = true;
+      if (isLeftKey(e)) {
+        s.keys.left = true;
+        s.keys.right = false;
+      }
+      if (isRightKey(e)) {
+        s.keys.right = true;
+        s.keys.left = false;
+      }
       if (['KeyR'].includes(e.code)) triggerReload();
       if (['Space'].includes(e.code)) {
         e.preventDefault();
@@ -657,10 +664,10 @@ export const GalaxyCommanderGame: React.FC<GameProps> = ({ onGameOver, onBack })
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const s = simRef.current;
-      if (['KeyW', 'ArrowUp'].includes(e.code)) s.keys.up = false;
-      if (['KeyS', 'ArrowDown'].includes(e.code)) s.keys.down = false;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) s.keys.left = false;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) s.keys.right = false;
+      if (isUpKey(e)) s.keys.up = false;
+      if (isDownKey(e)) s.keys.down = false;
+      if (isLeftKey(e)) s.keys.left = false;
+      if (isRightKey(e)) s.keys.right = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

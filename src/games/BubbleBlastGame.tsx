@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Sparkles, RefreshCw, Zap, ArrowLeft } from 'lucide-react';
 
@@ -257,15 +258,15 @@ export const BubbleBlastGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       if (e.code === 'Space') {
         e.preventDefault();
         swapBubbles();
-      } else if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      } else if (isLeftKey(e)) {
         const s = stateRef.current;
         s.cannon.angle = Math.max(-Math.PI + 0.15, s.cannon.angle - 0.05);
         updateTrajectory(s.cannon.angle);
-      } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      } else if (isRightKey(e)) {
         const s = stateRef.current;
         s.cannon.angle = Math.min(-0.15, s.cannon.angle + 0.05);
         updateTrajectory(s.cannon.angle);
-      } else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+      } else if (isUpKey(e)) {
         shootBubble();
       }
     };

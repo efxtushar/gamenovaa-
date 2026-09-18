@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -786,10 +787,16 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const k = simRef.current.keys;
-      if (['KeyW', 'ArrowUp'].includes(e.code)) k.up = true;
-      if (['KeyS', 'ArrowDown'].includes(e.code)) k.down = true;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) k.left = true;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) k.right = true;
+      if (isUpKey(e)) k.up = true;
+      if (isDownKey(e)) k.down = true;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
       if (['Space'].includes(e.code)) {
         e.preventDefault();
         k.drift = true;
@@ -809,10 +816,10 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const k = simRef.current.keys;
-      if (['KeyW', 'ArrowUp'].includes(e.code)) k.up = false;
-      if (['KeyS', 'ArrowDown'].includes(e.code)) k.down = false;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) k.left = false;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) k.right = false;
+      if (isUpKey(e)) k.up = false;
+      if (isDownKey(e)) k.down = false;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
       if (['Space'].includes(e.code)) k.drift = false;
       if (['ShiftLeft', 'ShiftRight', 'KeyN', 'KeyB'].includes(e.code)) k.boost = false;
     };
@@ -2041,9 +2048,15 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.save();
       ctx.translate(carScreenX, carScreenY);
 
-      if (p.isDrifting) {
-        ctx.rotate(p.driftAngle * 0.04);
-      }
+      // Car nose rotation based on steering input and drift angle:
+      // Left steering (A / ArrowLeft) -> rotates counter-clockwise (car nose tilts LEFT)
+      // Right steering (D / ArrowRight) -> rotates clockwise (car nose tilts RIGHT)
+      const isSteeringLeft = s.keys.left || mobileControlsRef.current.left;
+      const isSteeringRight = s.keys.right || mobileControlsRef.current.right;
+      const targetSteerAngle = isSteeringLeft ? -0.28 : isSteeringRight ? 0.28 : 0;
+      p.steer = (p.steer || 0) + (targetSteerAngle - (p.steer || 0)) * 0.22;
+      const carNoseRotation = (p.isDrifting ? p.driftAngle * 0.04 : 0) + p.steer * 0.35;
+      ctx.rotate(carNoseRotation);
 
       // Car Shadow (expands & fades during jumps)
       const shadowAlpha = Math.max(0.2, 0.6 - p.y * 0.005);
@@ -2087,12 +2100,7 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.fillRect(-carW * 0.54 + 6, -14, 20, 36);
       ctx.fillRect(carW * 0.54 - 26, -14, 20, 36);
 
-      const steerAngle =
-        s.keys.left || mobileControlsRef.current.left
-          ? -0.28
-          : s.keys.right || mobileControlsRef.current.right
-          ? 0.28
-          : 0;
+      const steerAngle = p.steer;
 
       ctx.save();
       ctx.translate(-carW * 0.45, -carH * 0.6);

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import { Play, RotateCcw, Compass } from 'lucide-react';
 
 export const PirateTreasureGame: React.FC = () => {
@@ -24,14 +25,14 @@ export const PirateTreasureGame: React.FC = () => {
       x: 100,
       y: 100,
       radius: 18,
-      angle: 0,
+      angle: -Math.PI / 2,
       speed: 0,
       maxSpeed: 4.5,
       accel: 0.15,
       turnSpeed: 0.06
     };
 
-    const keys: Record<string, boolean> = {};
+    const keys = { up: false, down: false, left: false, right: false };
 
     // Islands / Coral Reefs
     const islands = [
@@ -57,12 +58,22 @@ export const PirateTreasureGame: React.FC = () => {
     ];
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      keys[e.key] = true;
-      keys[e.code] = true;
+      if (isLeftKey(e)) {
+        keys.left = true;
+        keys.right = false;
+      }
+      if (isRightKey(e)) {
+        keys.right = true;
+        keys.left = false;
+      }
+      if (isUpKey(e)) keys.up = true;
+      if (isDownKey(e)) keys.down = true;
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      keys[e.key] = false;
-      keys[e.code] = false;
+      if (isLeftKey(e)) keys.left = false;
+      if (isRightKey(e)) keys.right = false;
+      if (isUpKey(e)) keys.up = false;
+      if (isDownKey(e)) keys.down = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -99,18 +110,18 @@ export const PirateTreasureGame: React.FC = () => {
       });
 
       // 3. Update Ship Controls
-      if (keys['ArrowUp'] || keys['KeyW']) {
+      if (keys.up) {
         ship.speed = Math.min(ship.speed + ship.accel, ship.maxSpeed);
-      } else if (keys['ArrowDown'] || keys['KeyS']) {
+      } else if (keys.down) {
         ship.speed = Math.max(ship.speed - ship.accel * 1.5, -ship.maxSpeed * 0.5);
       } else {
         ship.speed *= 0.96; // friction
       }
 
-      if (keys['ArrowLeft'] || keys['KeyA']) {
+      if (keys.left) {
         ship.angle -= ship.turnSpeed;
       }
-      if (keys['ArrowRight'] || keys['KeyD']) {
+      if (keys.right) {
         ship.angle += ship.turnSpeed;
       }
 

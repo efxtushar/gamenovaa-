@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Compass, Sparkles, Anchor } from 'lucide-react';
 
@@ -159,19 +160,25 @@ export const DeepSeaAdventureGame: React.FC<GameProps> = ({ onGameOver, onBack }
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const s = stateRef.current;
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) s.keys.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) s.keys.right = true;
-      if (['ArrowUp', 'KeyW'].includes(e.code)) s.keys.up = true;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) s.keys.down = true;
+      if (isLeftKey(e)) {
+        s.keys.left = true;
+        s.keys.right = false;
+      }
+      if (isRightKey(e)) {
+        s.keys.right = true;
+        s.keys.left = false;
+      }
+      if (isUpKey(e)) s.keys.up = true;
+      if (isDownKey(e)) s.keys.down = true;
       if (['Space', 'KeyE'].includes(e.code)) triggerSonar();
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const s = stateRef.current;
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) s.keys.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) s.keys.right = false;
-      if (['ArrowUp', 'KeyW'].includes(e.code)) s.keys.up = false;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) s.keys.down = false;
+      if (isLeftKey(e)) s.keys.left = false;
+      if (isRightKey(e)) s.keys.right = false;
+      if (isUpKey(e)) s.keys.up = false;
+      if (isDownKey(e)) s.keys.down = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

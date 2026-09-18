@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import {
   Play,
@@ -545,15 +546,17 @@ export const CyberSamuraiGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const s = stateRef.current;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) {
+      if (isLeftKey(e)) {
         s.keys.left = true;
+        s.keys.right = false;
         s.samurai.facing = -1;
       }
-      if (['KeyD', 'ArrowRight'].includes(e.code)) {
+      if (isRightKey(e)) {
         s.keys.right = true;
+        s.keys.left = false;
         s.samurai.facing = 1;
       }
-      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+      if (isUpKey(e) || ['Space'].includes(e.code)) {
         e.preventDefault();
         s.keys.jump = true;
       }
@@ -576,9 +579,9 @@ export const CyberSamuraiGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const s = stateRef.current;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) s.keys.left = false;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) s.keys.right = false;
-      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) s.keys.jump = false;
+      if (isLeftKey(e)) s.keys.left = false;
+      if (isRightKey(e)) s.keys.right = false;
+      if (isUpKey(e) || ['Space'].includes(e.code)) s.keys.jump = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Shield, Crosshair, Zap } from 'lucide-react';
 
@@ -98,13 +99,20 @@ export const SkyWarriorGame: React.FC<GameProps> = ({ onGameOver }) => {
   // Keys
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'KeyW'].includes(e.code)) stateRef.current.keys.up = true;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) stateRef.current.keys.down = true;
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = true;
+      const k = stateRef.current.keys;
+      if (isUpKey(e)) k.up = true;
+      if (isDownKey(e)) k.down = true;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
       if (['Space', 'KeyJ'].includes(e.code)) {
         e.preventDefault();
-        stateRef.current.keys.fire = true;
+        k.fire = true;
       }
       if (['KeyK', 'KeyX'].includes(e.code)) {
         e.preventDefault();
@@ -113,11 +121,12 @@ export const SkyWarriorGame: React.FC<GameProps> = ({ onGameOver }) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'KeyW'].includes(e.code)) stateRef.current.keys.up = false;
-      if (['ArrowDown', 'KeyS'].includes(e.code)) stateRef.current.keys.down = false;
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = false;
-      if (['Space', 'KeyJ'].includes(e.code)) stateRef.current.keys.fire = false;
+      const k = stateRef.current.keys;
+      if (isUpKey(e)) k.up = false;
+      if (isDownKey(e)) k.down = false;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
+      if (['Space', 'KeyJ'].includes(e.code)) k.fire = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

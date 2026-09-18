@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isUpKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Zap, Moon, Heart, ArrowLeft } from 'lucide-react';
 
@@ -181,7 +182,7 @@ export const NinjaDashGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameState !== 'PLAYING') return;
-      if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+      if (isUpKey(e) || e.code === 'Space') {
         e.preventDefault();
         jump();
       }

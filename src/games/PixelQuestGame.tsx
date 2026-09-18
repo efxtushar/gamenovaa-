@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Trophy, Sparkles } from 'lucide-react';
 
@@ -87,9 +88,16 @@ export const PixelQuestGame: React.FC<GameProps> = ({ onGameOver }) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = true;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = true;
-      if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+      const k = stateRef.current.keys;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
+      if (isUpKey(e) || ['Space'].includes(e.code)) {
         e.preventDefault();
         const p = stateRef.current.player;
         if (p.isGrounded) {
@@ -101,8 +109,9 @@ export const PixelQuestGame: React.FC<GameProps> = ({ onGameOver }) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'KeyA'].includes(e.code)) stateRef.current.keys.left = false;
-      if (['ArrowRight', 'KeyD'].includes(e.code)) stateRef.current.keys.right = false;
+      const k = stateRef.current.keys;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);

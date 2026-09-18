@@ -6,13 +6,14 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { 
-  GameState, CarConfig, TrackConfig, RacerState, StuntScoreNotice 
+  GameState, CarConfig, TrackConfig, RacerState, StuntScoreNotice, CheckpointData 
 } from './turbo-tracks/types';
 import { ORIGINAL_CARS, TRACK_CONFIGS } from './turbo-tracks/tracksData';
 import { createToyCarMesh, BuiltCarResult } from './turbo-tracks/carModelBuilder';
 import { build3DTrack, BuiltTrackResult } from './turbo-tracks/trackMeshBuilder';
 import { TurboPhysicsEngine, InputState } from './turbo-tracks/carPhysics';
 import { turboAudio } from './turbo-tracks/toyAudio';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 
 interface TurboTracksGameProps {
   onBack: () => void;
@@ -27,7 +28,10 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
   const [selectedTrack, setSelectedTrack] = useState<TrackConfig>(TRACK_CONFIGS[0]);
   const [carPaintColor, setCarPaintColor] = useState<string>(ORIGINAL_CARS[0].primaryColor);
 
-  // HUD & Racing Live States
+  // HUD & Racing Live States (including 3-Life System)
+  const [playerLives, setPlayerLives] = useState<number>(3);
+  const [lifeFlash, setLifeFlash] = useState<boolean>(false);
+  const [showLifeLostToast, setShowLifeLostToast] = useState<boolean>(false);
   const [position, setPosition] = useState<number>(1);
   const [totalRacers] = useState<number>(4);
   const [currentLap, setCurrentLap] = useState<number>(1);
@@ -55,6 +59,11 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
   const minimapCanvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState>('MENU');
   const animFrameIdRef = useRef<number | null>(null);
+
+  // Life and Checkpoint Refs (Immediate sync without waiting for render loop)
+  const playerLivesRef = useRef<number>(3);
+  const isRecoveringRef = useRef<boolean>(false);
+  const latestCheckpointRef = useRef<CheckpointData | null>(null);
 
   // Three.js References
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -105,10 +114,84 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
 
     if (mode === 'RACING') {
       turboAudio.startEngine();
-    } else if (mode === 'PAUSED' || mode === 'MENU' || mode === 'GARAGE' || mode === 'TRACK_SELECT') {
+    } else if (mode === 'PAUSED' || mode === 'MENU' || mode === 'GARAGE' || mode === 'TRACK_SELECT' || mode === 'ELIMINATED') {
       turboAudio.updateEngineSound(0, false, false);
     }
   }, []);
+
+  // -------------------------------------------------------------
+  // FALL ELIMINATION & 3-LIFE RECOVERY HANDLER
+  // -------------------------------------------------------------
+  const handlePlayerFall = useCallback(() => {
+    if (isRecoveringRef.current || playerLivesRef.current <= 0) {
+      return;
+    }
+    isRecoveringRef.current = true;
+
+    // Deduct exactly 1 life
+    playerLivesRef.current = Math.max(0, playerLivesRef.current - 1);
+    setPlayerLives(playerLivesRef.current);
+
+    // Audio crash sound
+    turboAudio.playCrash();
+
+    // Check if player is completely out of lives
+    if (playerLivesRef.current <= 0) {
+      setGameMode('ELIMINATED');
+      turboAudio.updateEngineSound(0, false, false);
+      isRecoveringRef.current = false;
+      return;
+    }
+
+    // Still has lives remaining -> Enter FALL_RECOVERY
+    setGameMode('FALL_RECOVERY');
+    setLifeFlash(true);
+    setShowLifeLostToast(true);
+    setTimeout(() => setLifeFlash(false), 800);
+    setTimeout(() => setShowLifeLostToast(false), 1600);
+
+    // Reset car position, velocity, and orientation to latest valid checkpoint
+    const cp = latestCheckpointRef.current;
+    const player = playerRacerRef.current;
+    if (cp && player) {
+      player.pos.copy(cp.pos);
+      player.quaternion.copy(cp.quaternion);
+      player.vel.set(0, 0, 0);
+      player.speedKmH = 0;
+      player.steer = 0;
+      player.steerAngle = 0;
+      player.headingAngle = 0;
+      player.lateralVelocity = 0;
+      player.driftValue = 0;
+      player.isDrifting = false;
+      player.isBoosting = false;
+      player.isAirborne = false;
+      player.airTimeSeconds = 0;
+      player.airFlipAccum = 0;
+      player.airRollAccum = 0;
+      player.trackProgress = cp.trackProgress;
+      player.currentLap = cp.currentLap;
+
+      player.meshGroup.position.copy(player.pos);
+      player.meshGroup.quaternion.copy(player.quaternion);
+
+      if (cameraRef.current) {
+        const camOffset = new THREE.Vector3(0, 3.2, -7.5).applyQuaternion(cp.quaternion);
+        cameraRef.current.position.copy(cp.pos).add(camOffset);
+        const lookOffset = new THREE.Vector3(0, 1.2, 3.5).applyQuaternion(cp.quaternion);
+        camLookTargetRef.current.copy(cp.pos).add(lookOffset);
+        cameraRef.current.lookAt(camLookTargetRef.current);
+      }
+    }
+
+    // Brief stabilization pause at checkpoint before resuming racing
+    setTimeout(() => {
+      if (gameStateRef.current === 'FALL_RECOVERY') {
+        setGameMode('RACING');
+        isRecoveringRef.current = false;
+      }
+    }, 1000);
+  }, [setGameMode]);
 
   // -------------------------------------------------------------
   // COUNTDOWN LOGIC (3 -> 2 -> 1 -> GO!)
@@ -304,7 +387,20 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
       aiRacersRef.current.push(aiRacer);
     });
 
-    // Reset live HUD states
+    // Reset live HUD & lives states
+    playerLivesRef.current = 3;
+    setPlayerLives(3);
+    isRecoveringRef.current = false;
+    setLifeFlash(false);
+    setShowLifeLostToast(false);
+
+    latestCheckpointRef.current = {
+      trackProgress: 0,
+      currentLap: 1,
+      pos: startPos.clone(),
+      quaternion: startQuat.clone()
+    };
+
     camLookInitRef.current = false;
     setCurrentLap(1);
     setTotalLaps(trackCfg.laps);
@@ -400,14 +496,21 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
     window.addEventListener('resize', handleResize);
 
     // -----------------------------------------------------------
-    // KEYBOARD INPUT LISTENER
+    // KEYBOARD INPUT LISTENER (Universal A=Left, D=Right)
     // -----------------------------------------------------------
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (gameStateRef.current === 'ELIMINATED') return;
+      if (isUpKey(e)) inputRef.current.forward = true;
+      if (isDownKey(e)) inputRef.current.backward = true;
+      if (isLeftKey(e)) {
+        inputRef.current.left = true;
+        inputRef.current.right = false;
+      }
+      if (isRightKey(e)) {
+        inputRef.current.right = true;
+        inputRef.current.left = false;
+      }
       const code = e.code;
-      if (code === 'KeyW' || code === 'ArrowUp') inputRef.current.forward = true;
-      if (code === 'KeyS' || code === 'ArrowDown') inputRef.current.backward = true;
-      if (code === 'KeyA' || code === 'ArrowLeft') inputRef.current.left = true;
-      if (code === 'KeyD' || code === 'ArrowRight') inputRef.current.right = true;
       if (code === 'Space') inputRef.current.drift = true;
       if (code === 'ShiftLeft' || code === 'ShiftRight') inputRef.current.boost = true;
       if (code === 'KeyR') inputRef.current.reset = true;
@@ -421,11 +524,11 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (isUpKey(e)) inputRef.current.forward = false;
+      if (isDownKey(e)) inputRef.current.backward = false;
+      if (isLeftKey(e)) inputRef.current.left = false;
+      if (isRightKey(e)) inputRef.current.right = false;
       const code = e.code;
-      if (code === 'KeyW' || code === 'ArrowUp') inputRef.current.forward = false;
-      if (code === 'KeyS' || code === 'ArrowDown') inputRef.current.backward = false;
-      if (code === 'KeyA' || code === 'ArrowLeft') inputRef.current.left = false;
-      if (code === 'KeyD' || code === 'ArrowRight') inputRef.current.right = false;
       if (code === 'Space') inputRef.current.drift = false;
       if (code === 'ShiftLeft' || code === 'ShiftRight') inputRef.current.boost = false;
       if (code === 'KeyR') inputRef.current.reset = false;
@@ -467,8 +570,17 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
         return;
       }
 
-      // 2. RACING & COUNTDOWN MODES (PHYSICS & RACER UPDATES)
-      if ((currentMode === 'RACING' || currentMode === 'COUNTDOWN') && physicsEngineRef.current) {
+      // If ELIMINATED: keep background track animations running, render scene, but do not update car physics
+      if (currentMode === 'ELIMINATED') {
+        if (currentTrackResultRef.current) {
+          currentTrackResultRef.current.updateAnimations(delta, currentTime * 0.001);
+        }
+        renderer.render(scene, camera);
+        return;
+      }
+
+      // 2. RACING, COUNTDOWN & FALL_RECOVERY MODES (PHYSICS & RACER UPDATES)
+      if ((currentMode === 'RACING' || currentMode === 'COUNTDOWN' || currentMode === 'FALL_RECOVERY') && physicsEngineRef.current) {
         const player = playerRacerRef.current;
         const aiList = aiRacersRef.current;
         const track = currentTrackResultRef.current;
@@ -478,10 +590,10 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
         }
 
         if (player) {
-          // If countdown, prevent forward drive but allow wheel spin/rev
+          // If countdown or fall recovery, prevent driving controls
           const activeInput = currentMode === 'RACING' 
             ? inputRef.current 
-            : { ...inputRef.current, forward: false };
+            : { forward: false, backward: false, left: false, right: false, drift: false, boost: false, reset: false };
 
           physicsEngineRef.current.updatePlayer(
             player,
@@ -490,12 +602,49 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
             (notice) => {
               setStuntNotices(prev => [notice, ...prev.slice(0, 4)]);
               setTotalStuntScore(player.stuntScore);
+            },
+            () => {
+              handlePlayerFall();
             }
           );
 
+          // Record valid checkpoint when driving safely on track:
+          if (currentMode === 'RACING' && !player.isAirborne && Math.abs(player.steer) < (track.trackWidth / 2) * 0.7) {
+            const currentFrame = track.getFrameAt(player.trackProgress);
+            const isNearJump = track.jumpRamps.some(j => Math.abs(j.t - player.trackProgress) < 0.035);
+            if (currentFrame.normal.y > 0.6 && !isNearJump) {
+              const cp = latestCheckpointRef.current;
+              const currentTotal = player.currentLap + player.trackProgress;
+              const cpTotal = cp ? cp.currentLap + cp.trackProgress : 0;
+              if (!cp || currentTotal > cpTotal + 0.03) {
+                latestCheckpointRef.current = {
+                  trackProgress: player.trackProgress,
+                  currentLap: player.currentLap,
+                  pos: currentFrame.pos.clone().addScaledVector(currentFrame.normal, 0.45),
+                  quaternion: new THREE.Quaternion().setFromRotationMatrix(
+                    new THREE.Matrix4().makeBasis(currentFrame.binormal, currentFrame.normal, currentFrame.tangent)
+                  )
+                };
+              }
+            }
+          }
+
+          // Fall detection check in animation loop (double safety against falling under map/abyss)
+          if ((currentMode === 'RACING' || currentMode === 'FALL_RECOVERY') && !isRecoveringRef.current) {
+            const currentFrame = track.getFrameAt(player.trackProgress);
+            const distToSpline = player.pos.distanceTo(currentFrame.pos);
+            const fellBelowTrack = player.pos.y < currentFrame.pos.y - 4.5 && player.vel.y < -3.0;
+            const fellBelowFloor = player.pos.y < 0.8;
+            const fellOutsideWorld = distToSpline > 28.0;
+
+            if (fellBelowTrack || fellBelowFloor || fellOutsideWorld) {
+              handlePlayerFall();
+            }
+          }
+
           // AI Racers
           aiList.forEach((ai, idx) => {
-            physicsEngineRef.current?.updateAI(ai, currentMode === 'RACING' ? delta : 0, idx, player.totalProgress);
+            physicsEngineRef.current?.updateAI(ai, (currentMode === 'RACING' || currentMode === 'FALL_RECOVERY') ? delta : 0, idx, player.totalProgress);
           });
 
           // Calculate Dynamic Race Positions (Rankings)
@@ -1023,11 +1172,25 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
       {/* ------------------------------------------------------- */}
       {/* 5. PROFESSIONAL RACING HUD (TOP & BOTTOM)               */}
       {/* ------------------------------------------------------- */}
-      {(gameState === 'RACING' || gameState === 'COUNTDOWN') && (
+      {(gameState === 'RACING' || gameState === 'COUNTDOWN' || gameState === 'FALL_RECOVERY') && (
         <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+          {/* LIFE LOST RESPAWN TOAST BANNER */}
+          {showLifeLostToast && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-bounce">
+              <div className="px-5 py-2 rounded-2xl bg-rose-600/95 border-2 border-rose-400 text-white font-black text-sm sm:text-base tracking-widest uppercase shadow-[0_0_30px_rgba(225,29,72,0.8)] backdrop-blur-md flex items-center gap-2">
+                <span className="text-xl">⚠</span>
+                <span>TRACK FALL — 1 LIFE LOST</span>
+                <span className="text-xs bg-rose-900/80 px-2 py-0.5 rounded-md text-rose-200">RESPAWNING</span>
+              </div>
+              <span className="text-[11px] font-bold text-rose-300 mt-1 drop-shadow">
+                {playerLives} {playerLives === 1 ? 'LIFE' : 'LIVES'} REMAINING
+              </span>
+            </div>
+          )}
+
           {/* TOP HUD ROW */}
           <div className="flex items-start justify-between w-full">
-            {/* Top Left: Title, Position & Lap */}
+            {/* Top Left: Title, Position, Lap & Lives */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-black tracking-widest text-cyan-400 uppercase bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 backdrop-blur-md">
@@ -1053,6 +1216,24 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
               <div className="inline-flex items-center gap-2 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-bold text-slate-200">
                 <Flag className="w-3.5 h-3.5 text-rose-400" />
                 <span>LAP {String(currentLap).padStart(2, '0')} / {String(totalLaps).padStart(2, '0')}</span>
+              </div>
+
+              {/* 3-Life Indicator */}
+              <div className={`inline-flex items-center gap-2 bg-slate-950/85 px-3 py-1.5 rounded-xl border transition-all duration-300 ${
+                lifeFlash ? 'border-rose-500 bg-rose-950/70 shadow-[0_0_15px_rgba(244,63,94,0.6)] scale-105' : 'border-slate-800'
+              }`}>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">LIVES</span>
+                <div className="flex items-center gap-1.5 text-base leading-none select-none">
+                  <span className={playerLives >= 1 ? "text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.9)]" : "text-slate-600"}>
+                    {playerLives >= 1 ? '♥' : '♡'}
+                  </span>
+                  <span className={playerLives >= 2 ? "text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.9)]" : "text-slate-600"}>
+                    {playerLives >= 2 ? '♥' : '♡'}
+                  </span>
+                  <span className={playerLives >= 3 ? "text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.9)]" : "text-slate-600"}>
+                    {playerLives >= 3 ? '♥' : '♡'}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1169,10 +1350,10 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onTouchStart={() => { inputRef.current.left = true; }}
+                onTouchStart={() => { inputRef.current.left = true; inputRef.current.right = false; }}
                 onTouchEnd={() => { inputRef.current.left = false; }}
                 onTouchCancel={() => { inputRef.current.left = false; }}
-                onMouseDown={() => { inputRef.current.left = true; }}
+                onMouseDown={() => { inputRef.current.left = true; inputRef.current.right = false; }}
                 onMouseUp={() => { inputRef.current.left = false; }}
                 className="w-16 h-16 rounded-2xl bg-slate-900/80 active:bg-slate-700 border border-slate-700 flex items-center justify-center font-black text-xl text-white shadow-xl active:scale-95"
               >
@@ -1180,10 +1361,10 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
               </button>
               <button
                 type="button"
-                onTouchStart={() => { inputRef.current.right = true; }}
+                onTouchStart={() => { inputRef.current.right = true; inputRef.current.left = false; }}
                 onTouchEnd={() => { inputRef.current.right = false; }}
                 onTouchCancel={() => { inputRef.current.right = false; }}
-                onMouseDown={() => { inputRef.current.right = true; }}
+                onMouseDown={() => { inputRef.current.right = true; inputRef.current.left = false; }}
                 onMouseUp={() => { inputRef.current.right = false; }}
                 className="w-16 h-16 rounded-2xl bg-slate-900/80 active:bg-slate-700 border border-slate-700 flex items-center justify-center font-black text-xl text-white shadow-xl active:scale-95"
               >
@@ -1354,6 +1535,66 @@ export const TurboTracksGame: React.FC<TurboTracksGameProps> = ({ onBack }) => {
               >
                 <Compass className="w-4 h-4" />
                 <span>NEXT TRACK</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setGameMode('MENU')}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold uppercase transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>MAIN MENU</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------- */}
+      {/* 8B. ELIMINATION OVERLAY (OUT OF LIVES)                 */}
+      {/* ------------------------------------------------------- */}
+      {gameState === 'ELIMINATED' && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md pointer-events-auto">
+          <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-slate-900 border-2 border-rose-600/70 shadow-[0_0_50px_rgba(225,29,72,0.4)] text-center animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 text-xs font-black uppercase mb-3">
+              <span>⚠</span>
+              <span>RACE OVER</span>
+            </div>
+
+            <h2 className="text-4xl sm:text-5xl font-black italic tracking-tight text-white mb-2">
+              ELIMINATED
+            </h2>
+
+            {/* Empty Hearts Display */}
+            <div className="flex items-center justify-center gap-3 my-4 text-3xl sm:text-4xl text-rose-600/60 select-none">
+              <span>♡</span>
+              <span>♡</span>
+              <span>♡</span>
+            </div>
+
+            <p className="text-sm font-bold text-rose-300 mb-2">OUT OF LIVES</p>
+            <p className="text-xs text-slate-400 mb-6 max-w-xs mx-auto leading-relaxed">
+              You took one too many spills off the track! Reset and race again with 3 fresh lives.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => setupRace(selectedTrack, selectedCar, carPaintColor)}
+                className="flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-black text-sm uppercase shadow-lg shadow-rose-900/40 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>RETRY RACE (3 LIVES)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setGameMode('TRACK_SELECT')}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold uppercase transition-colors cursor-pointer"
+              >
+                <Compass className="w-4 h-4" />
+                <span>SELECT TRACK</span>
               </button>
 
               <button

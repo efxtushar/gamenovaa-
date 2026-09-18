@@ -6,8 +6,17 @@ export type GameState =
   | 'GARAGE' 
   | 'COUNTDOWN' 
   | 'RACING' 
+  | 'FALL_RECOVERY'
+  | 'ELIMINATED'
   | 'PAUSED' 
   | 'FINISH';
+
+export interface CheckpointData {
+  trackProgress: number;
+  currentLap: number;
+  pos: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+}
 
 export interface CarConfig {
   id: string;

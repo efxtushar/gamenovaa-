@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isUpKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import { Play, RotateCcw, Flame, Trophy, Shield, Heart } from 'lucide-react';
 
@@ -120,7 +121,7 @@ export const DragonFlightGame: React.FC<GameProps> = ({ onGameOver }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameState !== 'playing') return;
-      if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+      if (isUpKey(e) || e.code === 'Space') {
         e.preventDefault();
         flap();
       }

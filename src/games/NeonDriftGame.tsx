@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { sound } from '../utils/soundEffects';
+import { isLeftKey, isRightKey, isUpKey, isDownKey } from '../utils/gameInput';
 import confetti from 'canvas-confetti';
 import {
   Play,
@@ -341,23 +342,17 @@ export const NeonDriftGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const k = stateRef.current.keys;
+      if (isUpKey(e)) k.up = true;
+      if (isDownKey(e)) k.down = true;
+      if (isLeftKey(e)) {
+        k.left = true;
+        k.right = false;
+      }
+      if (isRightKey(e)) {
+        k.right = true;
+        k.left = false;
+      }
       switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          k.up = true;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          k.down = true;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          k.left = true;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          k.right = true;
-          break;
         case 'Space':
           e.preventDefault();
           k.space = true;
@@ -378,23 +373,11 @@ export const NeonDriftGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const k = stateRef.current.keys;
+      if (isUpKey(e)) k.up = false;
+      if (isDownKey(e)) k.down = false;
+      if (isLeftKey(e)) k.left = false;
+      if (isRightKey(e)) k.right = false;
       switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          k.up = false;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          k.down = false;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          k.left = false;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          k.right = false;
-          break;
         case 'Space':
           k.space = false;
           break;
