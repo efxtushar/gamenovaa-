@@ -1,6 +1,6 @@
 import React from 'react';
 import { CategoryItem } from '../data/categories';
-import { Swords, Flame, Crosshair, Trophy, Sparkles, Gamepad2, Compass, Shield, Smile, ArrowRight } from 'lucide-react';
+import { Swords, Flame, Crosshair, Trophy, Sparkles, Gamepad2, Compass, Shield, Layers, Dices, ArrowRight } from 'lucide-react';
 import { sound } from '../utils/soundEffects';
 
 interface CategoryCardProps {
@@ -17,17 +17,18 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   onSelectCategory 
 }) => {
   const getIcon = () => {
-    const props = { className: "w-5 h-5" };
     switch (category.name) {
-      case 'Action': return <Swords {...props} className="w-5 h-5 text-rose-500" />;
-      case 'Racing': return <Flame {...props} className="w-5 h-5 text-amber-500" />;
-      case 'Arcade': return <Gamepad2 {...props} className="w-5 h-5 text-purple-600" />;
-      case 'Puzzle': return <Sparkles {...props} className="w-5 h-5 text-pink-500" />;
-      case 'Sports': return <Trophy {...props} className="w-5 h-5 text-emerald-500" />;
-      case 'Adventure': return <Compass {...props} className="w-5 h-5 text-blue-500" />;
-      case 'Shooter': return <Crosshair {...props} className="w-5 h-5 text-indigo-500" />;
-      case 'Strategy': return <Shield {...props} className="w-5 h-5 text-teal-500" />;
-      default: return <Smile {...props} className="w-5 h-5 text-purple-500" />;
+      case 'Action': return <Swords className="w-5 h-5 text-rose-500" />;
+      case 'Racing': return <Flame className="w-5 h-5 text-amber-500" />;
+      case 'Adventure': return <Compass className="w-5 h-5 text-emerald-600" />;
+      case 'Arcade': return <Gamepad2 className="w-5 h-5 text-purple-600" />;
+      case 'Puzzle': return <Sparkles className="w-5 h-5 text-pink-500" />;
+      case 'Sports': return <Trophy className="w-5 h-5 text-orange-500" />;
+      case 'Shooting': return <Crosshair className="w-5 h-5 text-sky-500" />;
+      case 'Strategy': return <Shield className="w-5 h-5 text-amber-600" />;
+      case 'Platformer': return <Layers className="w-5 h-5 text-indigo-500" />;
+      case 'Other': return <Dices className="w-5 h-5 text-teal-500" />;
+      default: return <Gamepad2 className="w-5 h-5 text-purple-500" />;
     }
   };
 

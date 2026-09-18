@@ -187,19 +187,28 @@ function MainApp() {
     return games.slice(0, 6);
   }, [games]);
 
+  // Dynamically compute category game counts
+  const categoriesWithCounts = useMemo(() => {
+    return CATEGORIES.map(cat => ({
+      ...cat,
+      gameCount: games.filter(g => 
+        g.category.toLowerCase() === cat.name.toLowerCase()
+      ).length
+    }));
+  }, [games]);
+
   // Filtered Catalog
   const catalogGames = useMemo(() => {
     let result = games.filter(game => {
       // Category filter
       if (selectedCategory !== 'all') {
-        const catMatch = 
-          game.category.toLowerCase() === selectedCategory.toLowerCase() ||
-          game.category.toLowerCase().includes(selectedCategory.toLowerCase());
+        const target = selectedCategory.toLowerCase();
+        const catMatch = game.category.toLowerCase() === target;
         if (!catMatch) return false;
       }
 
       // Tab filter
-      if (currentView === 'popular' && game.rating < 4.7) return false;
+      if (currentView === 'popular' && (game.rating < 4.7 && !game.isPopular)) return false;
       if (currentView === 'new' && !game.isNew) return false;
       if (currentView === 'favorites' && !favorites.includes(game.id)) return false;
 
@@ -327,7 +336,7 @@ function MainApp() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {CATEGORIES.map(category => (
+                    {categoriesWithCounts.map(category => (
                       <CategoryCard
                         key={category.id}
                         category={category}
@@ -643,7 +652,7 @@ function MainApp() {
                           All Games
                         </h2>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-[#6D28D9] border border-purple-200/70 tracking-normal">
-                          30 Games
+                          {games.length} Games
                         </span>
                       </div>
                       <p className="text-[11px] sm:text-xs text-slate-400 font-normal tracking-wide">
@@ -674,16 +683,64 @@ function MainApp() {
                   </div>
                 </div>
 
-                <GameDiscoveryGrid
-                  games={catalogGames}
-                  onSelectGame={handleSelectGame}
-                  favorites={favorites}
-                  onToggleFavorite={(id) => {
-                    const target = games.find(g => g.id === id);
-                    if (target) toggleFavorite(target.id, target.slug);
-                  }}
-                  layout="standard"
-                />
+                {/* Quick Category Filter Bar */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-5 scrollbar-none">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+                      selectedCategory === 'all'
+                        ? 'bg-[#6D28D9] text-white shadow-xs'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+                    }`}
+                  >
+                    All ({games.length})
+                  </button>
+                  {categoriesWithCounts.map((cat) => {
+                    const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase();
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(isSelected ? 'all' : cat.name)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-[#6D28D9] text-white shadow-xs'
+                            : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+                        }`}
+                      >
+                        <span>{cat.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                          {cat.gameCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {catalogGames.length === 0 ? (
+                  <div className="py-16 text-center bg-white rounded-3xl border border-slate-200/80 p-8 shadow-xs">
+                    <p className="text-slate-500 text-sm">No games found matching your filter criteria.</p>
+                    <button
+                      onClick={() => {
+                        setSelectedCategory('all');
+                        setSearchQuery('');
+                      }}
+                      className="mt-4 px-4 py-2 rounded-xl bg-[#6D28D9] text-white font-bold text-xs cursor-pointer"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                ) : (
+                  <GameDiscoveryGrid
+                    games={catalogGames}
+                    onSelectGame={handleSelectGame}
+                    favorites={favorites}
+                    onToggleFavorite={(id) => {
+                      const target = games.find(g => g.id === id);
+                      if (target) toggleFavorite(target.id, target.slug);
+                    }}
+                    layout="standard"
+                  />
+                )}
               </section>
             </div>
           )}

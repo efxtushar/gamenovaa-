@@ -41,12 +41,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Center navigation links: Home, Categories, Popular, New
+  // Center navigation links: Home, New, Popular, Categories
   const centerNavLinks = [
     { id: 'home', label: 'Home' },
-    { id: 'categories', label: 'Categories' },
-    { id: 'popular', label: 'Popular' },
     { id: 'new', label: 'New' },
+    { id: 'popular', label: 'Popular' },
+    { id: 'categories', label: 'Categories' },
   ];
 
   // Close dropdown on outside click
@@ -98,14 +98,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#6D28D9] flex items-center justify-center text-white shadow-sm shadow-purple-500/20 group-hover:scale-105 group-hover:bg-[#5B21B6] transition-all">
               <Gamepad2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2.2]" />
             </div>
-            <div className="flex flex-col text-left">
-              <span className="font-display font-black text-base sm:text-lg tracking-tight text-[#111827] leading-none">
-                GAMENOVA
-              </span>
-              <span className="hidden min-[360px]:inline-block text-[9px] sm:text-[10px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">
-                Arcade Portal
-              </span>
-            </div>
+            <span className="font-display font-black text-base sm:text-lg tracking-tight text-[#111827] leading-none">
+              GAMENOVA
+            </span>
           </button>
         </div>
 

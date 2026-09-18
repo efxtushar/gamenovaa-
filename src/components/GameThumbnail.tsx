@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameItem } from '../data/games';
-import { Play, Sparkles, Gamepad2, Trophy, Flame, Swords, Crosshair, Shield } from 'lucide-react';
+import { Play, Sparkles, Gamepad2, Trophy, Flame, Swords, Crosshair, Shield, Compass, Layers, Dices } from 'lucide-react';
 
 interface GameThumbnailProps {
   game: GameItem;
@@ -20,10 +20,15 @@ export const GameThumbnail: React.FC<GameThumbnailProps> = ({
     switch (category) {
       case 'Racing': return <Flame className="w-6 h-6" />;
       case 'Action': return <Swords className="w-6 h-6" />;
+      case 'Shooting':
       case 'Shooter': return <Crosshair className="w-6 h-6" />;
       case 'Sports': return <Trophy className="w-6 h-6" />;
       case 'Puzzle': return <Sparkles className="w-6 h-6" />;
       case 'Strategy': return <Shield className="w-6 h-6" />;
+      case 'Adventure': return <Compass className="w-6 h-6" />;
+      case 'Platformer': return <Layers className="w-6 h-6" />;
+      case 'Other':
+      case 'Casual': return <Dices className="w-6 h-6" />;
       default: return <Gamepad2 className="w-6 h-6" />;
     }
   };

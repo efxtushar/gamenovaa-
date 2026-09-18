@@ -272,10 +272,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 >
                   <option value="Action">Action</option>
                   <option value="Racing">Racing</option>
-                  <option value="Shooter">Shooter</option>
-                  <option value="Sports">Sports</option>
-                  <option value="Puzzle">Puzzle</option>
                   <option value="Adventure">Adventure</option>
+                  <option value="Arcade">Arcade</option>
+                  <option value="Puzzle">Puzzle</option>
+                  <option value="Sports">Sports</option>
+                  <option value="Shooting">Shooting</option>
+                  <option value="Strategy">Strategy</option>
+                  <option value="Platformer">Platformer</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
             </div>

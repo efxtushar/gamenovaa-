@@ -49,18 +49,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   if (!isOpen) return null;
 
-  const categories = ['All', 'Action', 'Racing', 'Shooter', 'Puzzle', 'Sports', 'Adventure', 'Arcade', 'Strategy'];
+  const categories = ['All', 'Action', 'Racing', 'Adventure', 'Arcade', 'Puzzle', 'Sports', 'Shooting', 'Strategy', 'Platformer', 'Other'];
 
   const filteredGames = (games || []).filter((game) => {
     const q = (query || '').toLowerCase();
     const matchesQuery =
       !q ||
       game.title.toLowerCase().includes(q) ||
+      (game.name && game.name.toLowerCase().includes(q)) ||
       game.category.toLowerCase().includes(q) ||
       (game.tags && game.tags.some((t) => t.toLowerCase().includes(q))) ||
       (game.description && game.description.toLowerCase().includes(q));
 
-    const matchesCategory = activeCategory === 'All' || game.category.toLowerCase() === activeCategory.toLowerCase();
+    const matchesCategory =
+      activeCategory === 'All' ||
+      game.category.toLowerCase() === activeCategory.toLowerCase();
 
     return matchesQuery && matchesCategory;
   });
@@ -76,7 +79,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search 30 games, genres, tags..."
+            placeholder="Search all games, categories, tags..."
             className="w-full bg-transparent text-sm sm:text-base text-[#111827] placeholder-[#6B7280] font-sans focus:outline-none"
           />
           {query && (
