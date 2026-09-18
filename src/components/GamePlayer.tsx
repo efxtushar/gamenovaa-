@@ -174,7 +174,7 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
     }
   };
 
-  const isFullBleedGame = game.slug === 'neon-drift' || game.slug === 'mecha-battle' || game.slug === 'cyber-samurai' || game.slug === 'galaxy-commander' || game.slug === 'desert-racer';
+  const isFullBleedGame = game.slug === 'neon-drift' || game.slug === 'mecha-battle' || game.slug === 'cyber-samurai' || game.slug === 'galaxy-commander' || game.slug === 'desert-racer' || game.slug === 'zombie-escape';
 
   return (
     <div

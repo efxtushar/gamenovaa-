@@ -2,8 +2,10 @@
 class ZombieAudioEngine {
   private ctx: AudioContext | null = null;
   private ambientGain: GainNode | null = null;
+  private ambientSource: AudioBufferSourceNode | null = null;
   private isMuted: boolean = false;
   private volume: number = 0.8;
+  private lastGroanTime: number = 0;
 
   constructor() {
     // Check localStorage
@@ -50,7 +52,7 @@ class ZombieAudioEngine {
 
   // Start dark, atmospheric ambient wind and distant rain
   public startAmbience() {
-    if (this.ambientGain) return;
+    if (this.ambientGain || this.ambientSource) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -83,8 +85,34 @@ class ZombieAudioEngine {
       gain.connect(this.ctx.destination);
 
       noise.start();
+      this.ambientSource = noise;
       this.ambientGain = gain;
     } catch {}
+  }
+
+  public stopAmbience() {
+    if (this.ambientSource) {
+      try {
+        this.ambientSource.stop();
+        this.ambientSource.disconnect();
+      } catch {}
+      this.ambientSource = null;
+    }
+    if (this.ambientGain) {
+      try {
+        this.ambientGain.disconnect();
+      } catch {}
+      this.ambientGain = null;
+    }
+  }
+
+  public stopAll() {
+    this.stopAmbience();
+    if (this.ctx && this.ctx.state === 'running') {
+      try {
+        this.ctx.suspend();
+      } catch {}
+    }
   }
 
   // Tactical Rifle Gunshot (layered crack + low end thud)
@@ -179,6 +207,9 @@ class ZombieAudioEngine {
 
     try {
       const now = this.ctx.currentTime;
+      if (now - this.lastGroanTime < 0.5) return;
+      this.lastGroanTime = now;
+
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 

@@ -326,22 +326,14 @@ export function buildAbandonedCity(): CityBuildResult {
       head.position.set(poleX - side * 2.0, poleHeight - 0.4, z);
       cityGroup.add(head);
 
-      // SpotLight casting warm sodium cone onto asphalt (brighter for high visibility)
-      const spotLight = new THREE.SpotLight(0xffedd5, 75, 42, Math.PI / 3.0, 0.6, 1.0);
-      spotLight.position.set(poleX - side * 2.0, poleHeight - 0.5, z);
-      spotLight.target.position.set(poleX - side * 2.0, 0, z);
-      spotLight.castShadow = false;
-      cityGroup.add(spotLight);
-      cityGroup.add(spotLight.target);
-
-      // PointLight providing omnidirectional street illumination for walking zombies & environment
-      const streetPointLight = new THREE.PointLight(0xfdba74, 6.2, 32);
-      streetPointLight.position.set(poleX - side * 2.0, poleHeight - 0.8, z);
-      cityGroup.add(streetPointLight);
+      // Clean, performant sodium street light (replaces duplicate spot + point pair)
+      const streetLight = new THREE.PointLight(0xfdba74, 8.5, 36);
+      streetLight.position.set(poleX - side * 2.0, poleHeight - 0.6, z);
+      cityGroup.add(streetLight);
 
       // One or two lights flicker to simulate damaged urban grid
       if (Math.random() < 0.15) {
-        flickerLights.push(spotLight);
+        flickerLights.push(streetLight);
       }
 
       // Add obstacle for lamppost base
@@ -516,7 +508,8 @@ export function buildAbandonedCity(): CityBuildResult {
   // -------------------------------------------------------------
   // 7. ATMOSPHERIC PARTICLES (Drifting Night Mist / Rain Motes)
   // -------------------------------------------------------------
-  const particleCount = 450;
+  const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0) || window.innerWidth < 1024);
+  const particleCount = isMobile ? 80 : 150;
   const particleGeo = new THREE.BufferGeometry();
   const particlePos = new Float32Array(particleCount * 3);
   const particleVels: { x: number; y: number; z: number }[] = [];

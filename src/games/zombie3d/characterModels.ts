@@ -239,7 +239,30 @@ export interface Zombie3DResult {
   config: ZombieConfig;
   updateAnimation: (delta: number, isMoving: boolean, isAttacking: boolean, isDead: boolean) => void;
   flashDamage: () => void;
+  reset: () => void;
 }
+
+// Shared Geometries across all zombies to prevent allocating dozens of new buffers
+const sharedZombieGeos = {
+  pelvis: new THREE.BoxGeometry(0.48, 0.28, 0.28),
+  leg: new THREE.BoxGeometry(0.2, 0.85, 0.22),
+  chestStandard: new THREE.BoxGeometry(0.52, 0.58, 0.32),
+  chestBrute: new THREE.BoxGeometry(0.72, 0.58, 0.42),
+  head: new THREE.BoxGeometry(0.28, 0.32, 0.28),
+  eye: new THREE.BoxGeometry(0.045, 0.045, 0.045),
+  arm: new THREE.BoxGeometry(0.18, 0.75, 0.18)
+};
+
+const sharedPantsMat = new THREE.MeshStandardMaterial({
+  color: 0x334155,
+  roughness: 0.8
+});
+
+const sharedEyeMats: Record<ZombieType, THREE.MeshBasicMaterial> = {
+  walker: new THREE.MeshBasicMaterial({ color: 0xffea00 }),
+  runner: new THREE.MeshBasicMaterial({ color: 0xff2222 }),
+  brute: new THREE.MeshBasicMaterial({ color: 0xff7700 })
+};
 
 export function createZombieMesh(type: ZombieType): Zombie3DResult {
   const configs: Record<ZombieType, ZombieConfig> = {
@@ -288,7 +311,7 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
   const zombieGroup = new THREE.Group();
   zombieGroup.scale.setScalar(config.scale);
 
-  // Materials
+  // Materials (cloned so flashDamage color change is local to this zombie)
   const skinMat = new THREE.MeshStandardMaterial({
     color: config.color,
     roughness: 0.75
@@ -297,13 +320,8 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
     color: config.clothesColor,
     roughness: 0.8
   });
-  const pantsMat = new THREE.MeshStandardMaterial({
-    color: 0x334155,
-    roughness: 0.8
-  });
-  const eyeMat = new THREE.MeshBasicMaterial({
-    color: type === 'runner' ? 0xff2222 : type === 'brute' ? 0xff7700 : 0xffea00
-  });
+  const pantsMat = sharedPantsMat;
+  const eyeMat = sharedEyeMats[type];
 
   const root = new THREE.Group();
   zombieGroup.add(root);
@@ -313,21 +331,21 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
   hips.position.y = 0.95;
   root.add(hips);
 
-  const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.28, 0.28), pantsMat);
+  const pelvis = new THREE.Mesh(sharedZombieGeos.pelvis, pantsMat);
   hips.add(pelvis);
 
   // Legs
   const leftLeg = new THREE.Group();
   leftLeg.position.set(-0.16, -0.14, 0);
   hips.add(leftLeg);
-  const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.85, 0.22), pantsMat);
+  const leftLegMesh = new THREE.Mesh(sharedZombieGeos.leg, pantsMat);
   leftLegMesh.position.y = -0.42;
   leftLeg.add(leftLegMesh);
 
   const rightLeg = new THREE.Group();
   rightLeg.position.set(0.16, -0.14, 0);
   hips.add(rightLeg);
-  const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.85, 0.22), pantsMat);
+  const rightLegMesh = new THREE.Mesh(sharedZombieGeos.leg, pantsMat);
   rightLegMesh.position.y = -0.42;
   rightLeg.add(rightLegMesh);
 
@@ -340,9 +358,8 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
   spine.rotation.x = type === 'runner' ? 0.35 : 0.15;
 
   const chestW = type === 'brute' ? 0.72 : 0.52;
-  const chestH = 0.58;
-  const chestD = type === 'brute' ? 0.42 : 0.32;
-  const chest = new THREE.Mesh(new THREE.BoxGeometry(chestW, chestH, chestD), clothesMat);
+  const chestGeo = type === 'brute' ? sharedZombieGeos.chestBrute : sharedZombieGeos.chestStandard;
+  const chest = new THREE.Mesh(chestGeo, clothesMat);
   chest.position.y = 0.28;
   chest.castShadow = true;
   spine.add(chest);
@@ -352,45 +369,39 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
   headGroup.position.set(0, 0.62, 0.05);
   spine.add(headGroup);
 
-  const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.32, 0.28), skinMat);
+  const headMesh = new THREE.Mesh(sharedZombieGeos.head, skinMat);
   headMesh.position.y = 0.16;
   headMesh.castShadow = true;
   headGroup.add(headMesh);
 
-  // Glowing Zombie Eyes (Eerie dots piercing the dark city night)
-  const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.045, 0.045), eyeMat);
+  // Glowing Zombie Eyes (Unlit brightly colored cubes visible in the dark without expensive PointLights)
+  const leftEye = new THREE.Mesh(sharedZombieGeos.eye, eyeMat);
   leftEye.position.set(-0.07, 0.18, 0.15);
   headGroup.add(leftEye);
 
-  const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.045, 0.045), eyeMat);
+  const rightEye = new THREE.Mesh(sharedZombieGeos.eye, eyeMat);
   rightEye.position.set(0.07, 0.18, 0.15);
   headGroup.add(rightEye);
-
-  // Soft eye glow for visibility in dark areas
-  const eyeGlow = new THREE.PointLight(type === 'runner' ? 0xef4444 : type === 'brute' ? 0xf97316 : 0xfacc15, 1.8, 6.0);
-  eyeGlow.position.set(0, 0.18, 0.25);
-  headGroup.add(eyeGlow);
 
   // Arms (reaching out menacingly)
   const leftArm = new THREE.Group();
   leftArm.position.set(-chestW / 2 - 0.08, 0.48, 0);
   spine.add(leftArm);
-  const lArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.75, 0.18), skinMat);
+  const lArmMesh = new THREE.Mesh(sharedZombieGeos.arm, skinMat);
   lArmMesh.position.y = -0.35;
   leftArm.add(lArmMesh);
-  leftArm.rotation.x = -1.2; // arms raised forward
+  leftArm.rotation.x = -1.2;
 
   const rightArm = new THREE.Group();
   rightArm.position.set(chestW / 2 + 0.08, 0.48, 0);
   spine.add(rightArm);
-  const rArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.75, 0.18), skinMat);
+  const rArmMesh = new THREE.Mesh(sharedZombieGeos.arm, skinMat);
   rArmMesh.position.y = -0.35;
   rightArm.add(rArmMesh);
-  rightArm.rotation.x = -1.15; // arms raised forward
+  rightArm.rotation.x = -1.15;
 
   let animCycle = Math.random() * 10;
   let flashTimer = 0;
-  let deathTimer = 0;
 
   function flashDamage() {
     flashTimer = 0.12;
@@ -398,9 +409,23 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
     clothesMat.color.setHex(0x991b1b);
   }
 
+  function reset() {
+    flashTimer = 0;
+    animCycle = Math.random() * 10;
+    skinMat.color.setHex(config.color);
+    clothesMat.color.setHex(config.clothesColor);
+    root.rotation.set(0, 0, 0);
+    root.position.set(0, 0, 0);
+    leftLeg.rotation.set(0, 0, 0);
+    rightLeg.rotation.set(0, 0, 0);
+    headGroup.rotation.set(0, 0, 0);
+    leftArm.rotation.set(-1.2, 0, 0);
+    rightArm.rotation.set(-1.15, 0, 0);
+    zombieGroup.visible = true;
+  }
+
   function updateAnimation(delta: number, isMoving: boolean, isAttacking: boolean, isDead: boolean) {
     if (isDead) {
-      deathTimer += delta;
       // Ragdoll fall backwards onto the wet asphalt
       root.rotation.x = THREE.MathUtils.lerp(root.rotation.x, -Math.PI / 2, delta * 7);
       root.position.y = THREE.MathUtils.lerp(root.position.y, -0.85, delta * 7);
@@ -441,6 +466,7 @@ export function createZombieMesh(type: ZombieType): Zombie3DResult {
     group: zombieGroup,
     config,
     updateAnimation,
-    flashDamage
+    flashDamage,
+    reset
   };
 }

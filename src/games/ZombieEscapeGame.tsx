@@ -44,24 +44,36 @@ interface ActiveZombie {
   deathTimer: number;
 }
 
-interface BulletTracer {
+interface PooledTracer {
   mesh: THREE.Line;
+  posAttr: THREE.BufferAttribute;
   life: number;
-  maxLife: number;
+  active: boolean;
 }
 
-interface ShellCasing {
+interface PooledShell {
   mesh: THREE.Mesh;
   vel: THREE.Vector3;
   rotVel: THREE.Vector3;
   life: number;
+  active: boolean;
 }
 
-interface ImpactSpark {
+interface PooledSpark {
   mesh: THREE.Points;
+  posAttr: THREE.BufferAttribute;
   vels: THREE.Vector3[];
   life: number;
+  active: boolean;
 }
+
+// Scratch vectors to completely eliminate GC allocations in raycasting & shooting
+const _vCamDir = new THREE.Vector3();
+const _vCamAim = new THREE.Vector3();
+const _vAimDir = new THREE.Vector3();
+const _vMuzzle = new THREE.Vector3();
+const _vHitPoint = new THREE.Vector3();
+const _vToZombie = new THREE.Vector3();
 
 export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -91,6 +103,18 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
+  // High-performance State Refs for persistent game loop (never restart animate on state change)
+  const gameModeRef = useRef<GameMode>('MENU');
+  const waveRef = useRef(1);
+  const scoreRef = useRef(0);
+  const ammoRef = useRef(30);
+  const healthRef = useRef(100);
+  const isFiringVisualRef = useRef(false);
+  const isRunningRef = useRef(true);
+  const frameCountRef = useRef(0);
+  const onGameOverRef = useRef(onGameOver);
+  useEffect(() => { onGameOverRef.current = onGameOver; }, [onGameOver]);
+
   // Mobile virtual joystick state
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const joystickTouchIdRef = useRef<number | null>(null);
@@ -119,9 +143,14 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     roadBounds: { minX: number; maxX: number; minZ: number; maxZ: number };
     updateEnvironment: ((delta: number, time: number) => void) | null;
     zombies: ActiveZombie[];
-    bullets: BulletTracer[];
-    shells: ShellCasing[];
-    sparks: ImpactSpark[];
+    tracerPool: PooledTracer[];
+    shellPool: PooledShell[];
+    sparkPool: PooledSpark[];
+    zombiePool: {
+      walker: Zombie3DResult[];
+      runner: Zombie3DResult[];
+      brute: Zombie3DResult[];
+    };
     groundPlane: THREE.Plane;
     raycaster: THREE.Raycaster;
     mouseNDC: THREE.Vector2;
@@ -163,9 +192,10 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     roadBounds: { minX: -19, maxX: 19, minZ: -110, maxZ: 110 },
     updateEnvironment: null,
     zombies: [],
-    bullets: [],
-    shells: [],
-    sparks: [],
+    tracerPool: [],
+    shellPool: [],
+    sparkPool: [],
+    zombiePool: { walker: [], runner: [], brute: [] },
     groundPlane: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
     raycaster: new THREE.Raycaster(),
     mouseNDC: new THREE.Vector2(0, 0),
@@ -235,31 +265,39 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     const container = canvasContainerRef.current;
     if (!container) return;
 
-    // 1. Renderer
+    // 1. Renderer (Hardware-adapted resolution & shadows)
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
+    const isMobileDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 1024;
 
     const renderer = new THREE.WebGLRenderer({
       powerPreference: 'high-performance',
-      antialias: true,
-      alpha: false
+      antialias: !isMobileDevice,
+      alpha: false,
+      stencil: false,
+      depth: true
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.25 : 1.75));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.70; // 25-35% boosted visibility for clear night-time gameplay
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMappingExposure = 1.70; // High clarity night-time gameplay
+
+    if (!isMobileDevice) {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.BasicShadowMap; // Lightweight, high-FPS shadows
+    } else {
+      renderer.shadowMap.enabled = false;
+    }
 
     container.appendChild(renderer.domElement);
 
     // 2. Scene with Atmospheric Midnight Sky and Soft Blue Ambient Fog
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x131f33);
-    scene.fog = new THREE.FogExp2(0x18243b, 0.005); // Soft atmospheric mist: keeps buildings and zombies clearly visible
+    scene.fog = new THREE.FogExp2(0x18243b, 0.005); // Soft atmospheric mist
 
     // 3. Camera (56° FOV frames roadway cleanly, minimizing empty sky)
-    const camera = new THREE.PerspectiveCamera(56, width / height, 0.1, 300);
+    const camera = new THREE.PerspectiveCamera(56, width / height, 0.1, 280);
     camera.position.set(0, 2.8, -4.8);
 
     // 4. Lighting (Enhanced Hemisphere Sky/Ground Ambient + Cool Moonlight + Back Fill)
@@ -268,18 +306,22 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
 
     const moonLight = new THREE.DirectionalLight(0xdbeafe, 3.4);
     moonLight.position.set(25, 45, -30);
-    moonLight.castShadow = true;
-    moonLight.shadow.mapSize.width = 1024;
-    moonLight.shadow.mapSize.height = 1024;
-    moonLight.shadow.camera.near = 10;
-    moonLight.shadow.camera.far = 100;
-    moonLight.shadow.camera.left = -25;
-    moonLight.shadow.camera.right = 25;
-    moonLight.shadow.camera.top = 25;
-    moonLight.shadow.camera.bottom = -25;
+    if (!isMobileDevice) {
+      moonLight.castShadow = true;
+      moonLight.shadow.mapSize.width = 512;
+      moonLight.shadow.mapSize.height = 512;
+      moonLight.shadow.camera.near = 10;
+      moonLight.shadow.camera.far = 90;
+      moonLight.shadow.camera.left = -22;
+      moonLight.shadow.camera.right = 22;
+      moonLight.shadow.camera.top = 22;
+      moonLight.shadow.camera.bottom = -22;
+    } else {
+      moonLight.castShadow = false;
+    }
     scene.add(moonLight);
 
-    // Secondary opposing rim/fill light to ensure character & zombie silhouettes never blend into black
+    // Secondary opposing rim/fill light
     const fillLight = new THREE.DirectionalLight(0x7ea0c7, 2.2);
     fillLight.position.set(-25, 30, 35);
     scene.add(fillLight);
@@ -290,11 +332,73 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
 
     // 6. Build 3D Player Character
     const player = createPlayerMesh();
-    // Dedicated soft 360° player aura light so player and nearby zombies are clearly highlighted
     const playerAuraLight = new THREE.PointLight(0x38bdf8, 3.0, 16);
     playerAuraLight.position.set(0, 1.6, 0);
     player.group.add(playerAuraLight);
     scene.add(player.group);
+
+    // 7. PRE-ALLOCATED OBJECT POOLS (ZERO RUNTIME ALLOCATIONS)
+    // Bullet Tracers (12 pre-allocated lines)
+    const tracerPool: PooledTracer[] = [];
+    const sharedTracerMat = new THREE.LineBasicMaterial({
+      color: 0xffe066,
+      transparent: true,
+      opacity: 0.95
+    });
+    for (let i = 0; i < 12; i++) {
+      const geo = new THREE.BufferGeometry();
+      const posArray = new Float32Array(6);
+      const posAttr = new THREE.BufferAttribute(posArray, 3);
+      geo.setAttribute('position', posAttr);
+      const line = new THREE.Line(geo, sharedTracerMat);
+      line.visible = false;
+      line.frustumCulled = false;
+      scene.add(line);
+      tracerPool.push({ mesh: line, posAttr, life: 0, active: false });
+    }
+
+    // Spent Brass Shell Casings (16 pre-allocated cylinders)
+    const shellPool: PooledShell[] = [];
+    const sharedShellGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.06, 5);
+    const sharedShellMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      metalness: 0.85,
+      roughness: 0.35
+    });
+    for (let i = 0; i < 16; i++) {
+      const mesh = new THREE.Mesh(sharedShellGeo, sharedShellMat);
+      mesh.visible = false;
+      scene.add(mesh);
+      shellPool.push({
+        mesh,
+        vel: new THREE.Vector3(),
+        rotVel: new THREE.Vector3(),
+        life: 0,
+        active: false
+      });
+    }
+
+    // Impact Blood/Sparks (8 particle systems with 8 particles each)
+    const sparkPool: PooledSpark[] = [];
+    const sharedSparkMat = new THREE.PointsMaterial({
+      color: 0x991b1b,
+      size: 0.12,
+      transparent: true,
+      opacity: 0.9
+    });
+    for (let i = 0; i < 8; i++) {
+      const geo = new THREE.BufferGeometry();
+      const posArray = new Float32Array(8 * 3);
+      const posAttr = new THREE.BufferAttribute(posArray, 3);
+      geo.setAttribute('position', posAttr);
+      const points = new THREE.Points(geo, sharedSparkMat);
+      points.visible = false;
+      points.frustumCulled = false;
+      scene.add(points);
+      const vels: THREE.Vector3[] = [];
+      for (let j = 0; j < 8; j++) vels.push(new THREE.Vector3());
+      sparkPool.push({ mesh: points, posAttr, vels, life: 0, active: false });
+    }
 
     // Store engine refs
     const eng = engineRef.current;
@@ -306,6 +410,10 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     eng.spawnPoints = city.spawnPoints;
     eng.roadBounds = city.roadBounds;
     eng.updateEnvironment = city.updateEnvironment;
+    eng.tracerPool = tracerPool;
+    eng.shellPool = shellPool;
+    eng.sparkPool = sparkPool;
+    eng.zombiePool = { walker: [], runner: [], brute: [] };
 
     // Resize Observer
     const resizeObserver = new ResizeObserver(entries => {
@@ -323,9 +431,23 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
 
     return () => {
       resizeObserver.disconnect();
+      isRunningRef.current = false;
       if (eng.animationFrameId) {
         cancelAnimationFrame(eng.animationFrameId);
       }
+      // Dispose pools
+      sharedTracerMat.dispose();
+      tracerPool.forEach(t => t.mesh.geometry.dispose());
+      sharedShellGeo.dispose();
+      sharedShellMat.dispose();
+      sharedSparkMat.dispose();
+      sparkPool.forEach(sp => sp.mesh.geometry.dispose());
+      const poolLists: Zombie3DResult[][] = [eng.zombiePool.walker, eng.zombiePool.runner, eng.zombiePool.brute];
+      poolLists.forEach(list => {
+        list.forEach(z => {
+          scene.remove(z.group);
+        });
+      });
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
@@ -353,16 +475,16 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
   const startReload = useCallback(() => {
     const eng = engineRef.current;
     if (eng.keys.reload || eng.reloadStartTime > 0) return;
-    if (ammo >= maxAmmo) return;
+    if (ammoRef.current >= maxAmmo) return;
 
     eng.reloadStartTime = performance.now();
     setIsReloading(true);
     setReloadProgress(0);
     zombieAudio.playReload();
-  }, [ammo, maxAmmo]);
+  }, [maxAmmo]);
 
   // -------------------------------------------------------------
-  // FIRING LOGIC
+  // FIRING LOGIC (ALLOCATION-FREE POOL USAGE)
   // -------------------------------------------------------------
   const fireWeapon = useCallback(() => {
     const eng = engineRef.current;
@@ -373,97 +495,123 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     if (now - eng.lastShotTime < 115) return; // ~520 RPM
 
     // Auto-reload on empty clip
-    if (ammo <= 0) {
+    if (ammoRef.current <= 0) {
       startReload();
       return;
     }
 
     eng.lastShotTime = now;
-    setAmmo(prev => {
-      const nextAmmo = prev - 1;
-      if (nextAmmo <= 0) {
-        // Auto-reload immediately
-        startReload();
-      }
-      return nextAmmo;
-    });
+    ammoRef.current -= 1;
+    setAmmo(ammoRef.current);
+    if (ammoRef.current <= 0) {
+      startReload();
+    }
 
     // Sound
     zombieAudio.playGunshot();
 
     // Visual recoil & muzzle flash
     setIsFiringVisual(true);
-    setTimeout(() => setIsFiringVisual(false), 60);
+    isFiringVisualRef.current = true;
+    setTimeout(() => {
+      setIsFiringVisual(false);
+      isFiringVisualRef.current = false;
+    }, 60);
 
     // Spawn Bullet Tracer & Perform Raycast Collision
     if (!eng.scene || !eng.playerData || !eng.camera) return;
 
     const muzzleWorldPos = eng.playerData.getMuzzleWorldPos();
+    _vMuzzle.copy(muzzleWorldPos);
 
-    // Fire precisely towards the center reticle crosshair where camera is looking
-    const camDir = new THREE.Vector3();
-    eng.camera.getWorldDirection(camDir);
-    const camAimPoint = eng.camera.position.clone().add(camDir.clone().multiplyScalar(50));
-    const aimDir = camAimPoint.clone().sub(muzzleWorldPos).normalize();
+    // Calculate center reticle aim using pre-allocated scratch vectors
+    eng.camera.getWorldDirection(_vCamDir);
+    _vCamAim.copy(eng.camera.position).addScaledVector(_vCamDir, 50);
+    _vAimDir.subVectors(_vCamAim, _vMuzzle).normalize();
 
-    // Slight rifle spread
-    aimDir.x += (Math.random() - 0.5) * 0.025;
-    aimDir.y += (Math.random() - 0.5) * 0.025;
-    aimDir.z += (Math.random() - 0.5) * 0.025;
-    aimDir.normalize();
+    // Subtle rifle spread
+    _vAimDir.x += (Math.random() - 0.5) * 0.025;
+    _vAimDir.y += (Math.random() - 0.5) * 0.025;
+    _vAimDir.z += (Math.random() - 0.5) * 0.025;
+    _vAimDir.normalize();
 
-    // Check Raycast against active zombies
+    // Raycast hit test against active zombies (squared distance, zero vector allocations)
     let hitZombie: ActiveZombie | null = null;
-    let closestDist = 55; // max bullet distance
-    const hitPoint = muzzleWorldPos.clone().add(aimDir.clone().multiplyScalar(closestDist));
+    let closestDist = 55; // max bullet range
+    _vHitPoint.copy(_vMuzzle).addScaledVector(_vAimDir, closestDist);
 
-    for (const z of eng.zombies) {
+    for (let i = 0; i < eng.zombies.length; i++) {
+      const z = eng.zombies[i];
       if (z.isDead) continue;
-      // Test against zombie center-mass (torso height)
-      const zombieTorso = z.meshData.group.position.clone().add(new THREE.Vector3(0, 1.1, 0));
-      const toZombie = zombieTorso.sub(muzzleWorldPos);
-      const proj = toZombie.dot(aimDir);
+      const zPos = z.meshData.group.position;
+
+      // Fast squared distance box test
+      const dX = zPos.x - _vMuzzle.x;
+      const dZ = zPos.z - _vMuzzle.z;
+      if (dX * dX + dZ * dZ > 55 * 55) continue;
+
+      _vToZombie.set(zPos.x - _vMuzzle.x, (zPos.y + 1.1) - _vMuzzle.y, zPos.z - _vMuzzle.z);
+      const proj = _vToZombie.dot(_vAimDir);
       if (proj > 0 && proj < closestDist) {
-        const perpDist = toZombie.clone().sub(aimDir.clone().multiplyScalar(proj)).length();
+        // Pythagorean distance from ray to center mass: d^2 = lengthSq - proj^2
+        const perpDistSq = _vToZombie.lengthSq() - proj * proj;
         const hitRadius = z.type === 'brute' ? 1.3 : 0.85;
-        if (perpDist < hitRadius) {
+        if (perpDistSq < hitRadius * hitRadius) {
           closestDist = proj;
           hitZombie = z;
-          hitPoint.copy(muzzleWorldPos).add(aimDir.clone().multiplyScalar(proj));
+          _vHitPoint.copy(_vMuzzle).addScaledVector(_vAimDir, proj);
         }
       }
     }
 
-    // Create Tracer Line
-    const tracerGeo = new THREE.BufferGeometry().setFromPoints([
-      muzzleWorldPos,
-      hitPoint
-    ]);
-    const tracerMat = new THREE.LineBasicMaterial({
-      color: 0xffe066,
-      transparent: true,
-      opacity: 0.95
-    });
-    const tracerLine = new THREE.Line(tracerGeo, tracerMat);
-    eng.scene.add(tracerLine);
-    eng.bullets.push({ mesh: tracerLine, life: 0.06, maxLife: 0.06 });
+    // Grab pooled tracer line (zero allocation)
+    let tracer: PooledTracer | null = null;
+    for (let i = 0; i < eng.tracerPool.length; i++) {
+      if (!eng.tracerPool[i].active) {
+        tracer = eng.tracerPool[i];
+        break;
+      }
+    }
+    if (!tracer && eng.tracerPool.length > 0) {
+      tracer = eng.tracerPool[0]; // recycle oldest
+    }
+    if (tracer) {
+      const arr = tracer.posAttr.array as Float32Array;
+      arr[0] = _vMuzzle.x;
+      arr[1] = _vMuzzle.y;
+      arr[2] = _vMuzzle.z;
+      arr[3] = _vHitPoint.x;
+      arr[4] = _vHitPoint.y;
+      arr[5] = _vHitPoint.z;
+      tracer.posAttr.needsUpdate = true;
+      tracer.mesh.visible = true;
+      tracer.active = true;
+      tracer.life = 0.05;
+    }
 
-    // Spent brass shell casing
-    const shellMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.3 });
-    const shellMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.06, 6), shellMat);
-    shellMesh.position.copy(muzzleWorldPos);
-    eng.scene.add(shellMesh);
-
-    eng.shells.push({
-      mesh: shellMesh,
-      vel: new THREE.Vector3(
+    // Grab pooled spent brass shell casing (zero allocation)
+    let shell: PooledShell | null = null;
+    for (let i = 0; i < eng.shellPool.length; i++) {
+      if (!eng.shellPool[i].active) {
+        shell = eng.shellPool[i];
+        break;
+      }
+    }
+    if (!shell && eng.shellPool.length > 0) {
+      shell = eng.shellPool[0];
+    }
+    if (shell) {
+      shell.mesh.position.copy(_vMuzzle);
+      shell.mesh.visible = true;
+      shell.active = true;
+      shell.life = 1.0;
+      shell.vel.set(
         -Math.cos(eng.playerRotY) * 2.5 + (Math.random() - 0.5) * 0.5,
         1.8 + Math.random() * 0.8,
         Math.sin(eng.playerRotY) * 2.5 + (Math.random() - 0.5) * 0.5
-      ),
-      rotVel: new THREE.Vector3(Math.random() * 15, Math.random() * 15, Math.random() * 15),
-      life: 1.2
-    });
+      );
+      shell.rotVel.set(Math.random() * 15, Math.random() * 15, Math.random() * 15);
+    }
 
     // Handle Zombie Damage
     if (hitZombie) {
@@ -471,49 +619,61 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       hitZombie.hp -= 28; // Rifle damage
       hitZombie.meshData.flashDamage();
 
-      // Spark/Blood particles at hit point
-      const sparkCount = 8;
-      const sparkGeo = new THREE.BufferGeometry();
-      const sparkPos = new Float32Array(sparkCount * 3);
-      const sparkVels: THREE.Vector3[] = [];
-      for (let i = 0; i < sparkCount; i++) {
-        sparkPos[i * 3] = hitPoint.x;
-        sparkPos[i * 3 + 1] = hitPoint.y;
-        sparkPos[i * 3 + 2] = hitPoint.z;
-        sparkVels.push(new THREE.Vector3(
-          (Math.random() - 0.5) * 3,
-          Math.random() * 2.5 + 0.5,
-          (Math.random() - 0.5) * 3
-        ));
+      // Grab pooled spark/blood particles (zero allocation)
+      let spark: PooledSpark | null = null;
+      for (let i = 0; i < eng.sparkPool.length; i++) {
+        if (!eng.sparkPool[i].active) {
+          spark = eng.sparkPool[i];
+          break;
+        }
       }
-      sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-      const sparkMat = new THREE.PointsMaterial({
-        color: 0x991b1b,
-        size: 0.12,
-        transparent: true,
-        opacity: 0.9
-      });
-      const sparkPoints = new THREE.Points(sparkGeo, sparkMat);
-      eng.scene.add(sparkPoints);
-      eng.sparks.push({ mesh: sparkPoints, vels: sparkVels, life: 0.3 });
+      if (!spark && eng.sparkPool.length > 0) {
+        spark = eng.sparkPool[0];
+      }
+      if (spark) {
+        const sparkPos = spark.posAttr.array as Float32Array;
+        for (let i = 0; i < 8; i++) {
+          sparkPos[i * 3] = _vHitPoint.x;
+          sparkPos[i * 3 + 1] = _vHitPoint.y;
+          sparkPos[i * 3 + 2] = _vHitPoint.z;
+          spark.vels[i].set(
+            (Math.random() - 0.5) * 3,
+            Math.random() * 2.5 + 0.5,
+            (Math.random() - 0.5) * 3
+          );
+        }
+        spark.posAttr.needsUpdate = true;
+        spark.mesh.visible = true;
+        spark.active = true;
+        spark.life = 0.25;
+      }
 
       if (hitZombie.hp <= 0 && !hitZombie.isDead) {
         hitZombie.isDead = true;
         setKills(prev => prev + 1);
-        setScore(prev => prev + hitZombie.meshData.config.scoreValue);
+        scoreRef.current += hitZombie.meshData.config.scoreValue;
+        setScore(scoreRef.current);
       }
     } else {
-      // Concrete/Ground Impact sound
       zombieAudio.playBulletImpact(false);
     }
-  }, [ammo, startReload]);
+  }, [startReload]);
 
   // -------------------------------------------------------------
-  // SPAWN ZOMBIES (Walker, Runner, Brute)
+  // SPAWN ZOMBIES (WITH POOL REUSE & HARD ACTIVE CAPS)
   // -------------------------------------------------------------
   const spawnZombie = useCallback((type: ZombieType) => {
     const eng = engineRef.current;
     if (!eng.scene || eng.spawnPoints.length === 0) return;
+
+    // Hard cap active zombies to guarantee silky 60 FPS
+    const isMobile = isTouchDevice;
+    const maxActive = isMobile ? 10 : 15;
+    let aliveCount = 0;
+    for (let i = 0; i < eng.zombies.length; i++) {
+      if (!eng.zombies[i].isDead) aliveCount++;
+    }
+    if (aliveCount >= maxActive) return;
 
     // Pick spawn point furthest or around corners from player
     const spawnIdx = Math.floor(Math.random() * eng.spawnPoints.length);
@@ -524,17 +684,27 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       origin.z + (Math.random() - 0.5) * 3
     );
 
-    const meshData = createZombieMesh(type);
-    meshData.group.position.copy(spawnPos);
-    eng.scene.add(meshData.group);
+    let meshData: Zombie3DResult;
+    const pool = eng.zombiePool[type];
+    if (pool && pool.length > 0) {
+      meshData = pool.pop()!;
+      meshData.reset();
+      meshData.group.position.copy(spawnPos);
+      meshData.group.visible = true;
+    } else {
+      meshData = createZombieMesh(type);
+      meshData.group.position.copy(spawnPos);
+      eng.scene.add(meshData.group);
+    }
 
+    const currentWave = waveRef.current;
     const activeZ: ActiveZombie = {
       id: eng.nextZombieId++,
       type,
       meshData,
       hp: meshData.config.hp,
       maxHp: meshData.config.maxHp,
-      speed: meshData.config.speed * (1 + (wave - 1) * 0.04), // gentle scaling
+      speed: meshData.config.speed * (1 + (currentWave - 1) * 0.04), // gentle scaling
       damage: meshData.config.damage,
       attackCooldown: 0,
       isDead: false,
@@ -543,18 +713,23 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
 
     eng.zombies.push(activeZ);
     zombieAudio.playZombieGroan(type === 'brute');
-  }, [wave]);
+  }, [isTouchDevice]);
 
   // -------------------------------------------------------------
-  // START / RESTART GAME
+  // START / RESTART GAME (CLEAN POOL RECYCLING & AUDIO RESUME)
   // -------------------------------------------------------------
   const startGame = useCallback(() => {
     const eng = engineRef.current;
+    gameModeRef.current = 'PLAYING';
     setGameMode('PLAYING');
+    healthRef.current = 100;
     setHealth(100);
+    waveRef.current = 1;
     setWave(1);
     setKills(0);
+    scoreRef.current = 0;
     setScore(0);
+    ammoRef.current = 30;
     setAmmo(30);
     setIsReloading(false);
     setReloadProgress(0);
@@ -570,23 +745,43 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     eng.spawnTimer = 0;
     eng.betweenWavesTimer = 0;
 
-    // Clear old zombies & particles
-    eng.zombies.forEach(z => {
-      eng.scene?.remove(z.meshData.group);
-    });
+    // Recycle all active zombies back into pool
+    for (let i = 0; i < eng.zombies.length; i++) {
+      const z = eng.zombies[i];
+      z.meshData.group.visible = false;
+      eng.zombiePool[z.type].push(z.meshData);
+    }
     eng.zombies = [];
 
-    eng.bullets.forEach(b => eng.scene?.remove(b.mesh));
-    eng.bullets = [];
-
-    eng.shells.forEach(s => eng.scene?.remove(s.mesh));
-    eng.shells = [];
-
-    eng.sparks.forEach(sp => eng.scene?.remove(sp.mesh));
-    eng.sparks = [];
+    // Reset pooled effects
+    for (let i = 0; i < eng.tracerPool.length; i++) {
+      eng.tracerPool[i].active = false;
+      eng.tracerPool[i].mesh.visible = false;
+    }
+    for (let i = 0; i < eng.shellPool.length; i++) {
+      eng.shellPool[i].active = false;
+      eng.shellPool[i].mesh.visible = false;
+    }
+    for (let i = 0; i < eng.sparkPool.length; i++) {
+      eng.sparkPool[i].active = false;
+      eng.sparkPool[i].mesh.visible = false;
+    }
 
     // Ambient night rain/wind sound
     zombieAudio.startAmbience();
+  }, []);
+
+  // State switcher that keeps ref in sync to prevent loop tear-downs
+  const handleSetGameMode = useCallback((mode: GameMode) => {
+    gameModeRef.current = mode;
+    setGameMode(mode);
+  }, []);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      zombieAudio.stopAll();
+    };
   }, []);
 
   // -------------------------------------------------------------
@@ -596,9 +791,10 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     const eng = engineRef.current;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameMode !== 'PLAYING') {
-        if (e.code === 'Escape' && gameMode === 'PAUSED') {
-          setGameMode('PLAYING');
+      const currentMode = gameModeRef.current;
+      if (currentMode !== 'PLAYING') {
+        if (e.code === 'Escape' && currentMode === 'PAUSED') {
+          handleSetGameMode('PLAYING');
         }
         return;
       }
@@ -629,7 +825,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           break;
         case 'KeyP':
         case 'Escape':
-          setGameMode('PAUSED');
+          handleSetGameMode('PAUSED');
           break;
       }
     };
@@ -656,7 +852,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (gameMode !== 'PLAYING') return;
+      if (gameModeRef.current !== 'PLAYING') return;
 
       let dx = e.movementX;
       let dy = e.movementY;
@@ -690,7 +886,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (gameMode !== 'PLAYING') return;
+      if (gameModeRef.current !== 'PLAYING') return;
       if (e.button === 0) {
         eng.keys.fire = true;
         fireWeapon();
@@ -716,18 +912,18 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [gameMode, startReload, fireWeapon, triggerJump]);
+  }, [handleSetGameMode, startReload, fireWeapon, triggerJump]);
 
   // Click canvas to engage pointer lock for desktop mouse aiming
   const handleCanvasClick = useCallback(() => {
-    if (gameMode === 'PLAYING' && !isTouchDevice && canvasContainerRef.current) {
+    if (gameModeRef.current === 'PLAYING' && !isTouchDevice && canvasContainerRef.current) {
       try {
         if (document.pointerLockElement !== canvasContainerRef.current) {
           canvasContainerRef.current.requestPointerLock?.();
         }
       } catch {}
     }
-  }, [gameMode, isTouchDevice]);
+  }, [isTouchDevice]);
 
   // -------------------------------------------------------------
   // MOBILE TOUCH HANDLERS (JOYSTICK, RIGHT-SIDE AIM DRAG, FIRE)
@@ -882,26 +1078,52 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
   }, []);
 
   // -------------------------------------------------------------
-  // MAIN ANIMATION LOOP (PHYSICS, AI, CAMERA, RENDERING)
+  // PERSISTENT 60FPS GAME LOOP (NEVER TEARS DOWN ON REACT UPDATES)
   // -------------------------------------------------------------
   useEffect(() => {
     const eng = engineRef.current;
+    isRunningRef.current = true;
 
     const animate = () => {
+      if (!isRunningRef.current) return;
       eng.animationFrameId = requestAnimationFrame(animate);
 
       const now = performance.now();
-      const delta = Math.min((now - eng.lastTime) / 1000, 0.1);
+      // Delta time capped to 64ms (prevents physics explosion on tab-switching)
+      const delta = Math.min((now - eng.lastTime) / 1000, 0.064);
       eng.lastTime = now;
 
       if (!eng.renderer || !eng.scene || !eng.camera || !eng.playerData) return;
 
-      // Update atmospheric particles and flickering streetlights
+      const currentMode = gameModeRef.current;
+
+      // Update atmospheric mist & streetlight flicker
       if (eng.updateEnvironment) {
         eng.updateEnvironment(delta, now * 0.001);
       }
 
-      if (gameMode === 'PLAYING') {
+      // If paused or in menu, render static frame and skip game simulation
+      if (currentMode === 'PAUSED' || currentMode === 'MENU') {
+        eng.renderer.render(eng.scene, eng.camera);
+        return;
+      }
+
+      // Keep death animations playing during GameOver
+      if (currentMode === 'GAMEOVER') {
+        for (let i = eng.zombies.length - 1; i >= 0; i--) {
+          const z = eng.zombies[i];
+          if (z.isDead && z.deathTimer < 2.5) {
+            z.deathTimer += delta;
+            z.meshData.updateAnimation(delta, false, false, true);
+          }
+        }
+        eng.renderer.render(eng.scene, eng.camera);
+        return;
+      }
+
+      if (currentMode === 'PLAYING') {
+        frameCountRef.current++;
+
         // -------------------------------------------------------
         // 1. RELOAD PROGRESSION (1.4s EXACT)
         // -------------------------------------------------------
@@ -910,6 +1132,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           const RELOAD_DURATION_MS = 1400;
           if (elapsed >= RELOAD_DURATION_MS) {
             eng.reloadStartTime = 0;
+            ammoRef.current = maxAmmo;
             setAmmo(maxAmmo);
             setIsReloading(false);
             setReloadProgress(0);
@@ -937,15 +1160,13 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         if (eng.keys.right) inputX += 1;
 
         const isMoving = inputX !== 0 || inputZ !== 0;
-        const playerSpeed = 5.2; // comfortable sprint speed
+        const playerSpeed = 5.2;
 
         if (isMoving) {
           const moveLen = Math.hypot(inputX, inputZ);
           const normX = inputX / moveLen;
           const normZ = inputZ / moveLen;
 
-          // Transform direction relative to manual camera horizontal orientation:
-          // Moving forward (W or joystick up) travels in the direction camera is pointing
           const forwardX = Math.sin(eng.cameraYaw);
           const forwardZ = Math.cos(eng.cameraYaw);
           const rightX = Math.cos(eng.cameraYaw);
@@ -961,11 +1182,14 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           const clampedX = Math.max(eng.roadBounds.minX, Math.min(eng.roadBounds.maxX, nextX));
           const clampedZ = Math.max(eng.roadBounds.minZ, Math.min(eng.roadBounds.maxZ, nextZ));
 
-          // Obstacle collision check (cars, barricades, lampposts)
+          // Fast obstacle collision check with squared distance
           let collides = false;
-          for (const obs of eng.obstacles) {
-            const d = Math.hypot(clampedX - obs.x, clampedZ - obs.z);
-            if (d < obs.radius + 0.5) {
+          for (let i = 0; i < eng.obstacles.length; i++) {
+            const obs = eng.obstacles[i];
+            const odx = clampedX - obs.x;
+            const odz = clampedZ - obs.z;
+            const combinedR = obs.radius + 0.5;
+            if (odx * odx + odz * odz < combinedR * combinedR) {
               collides = true;
               break;
             }
@@ -980,7 +1204,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         // Jumping physics
         if (eng.isJumping) {
           eng.playerPos.y += eng.jumpVelocityY * delta;
-          eng.jumpVelocityY -= 19.6 * delta; // Crisp responsive gravity
+          eng.jumpVelocityY -= 19.6 * delta;
           if (eng.playerPos.y <= 0) {
             eng.playerPos.y = 0;
             eng.isJumping = false;
@@ -988,7 +1212,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           }
         }
 
-        // Player model smoothly faces the camera yaw (aim direction)
+        // Player model smoothly faces camera yaw (aim direction)
         let diff = eng.cameraYaw - eng.playerRotY;
         while (diff < -Math.PI) diff += Math.PI * 2;
         while (diff > Math.PI) diff -= Math.PI * 2;
@@ -1001,7 +1225,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         eng.playerData.updateAnimation(
           delta,
           isMoving,
-          isFiringVisual,
+          isFiringVisualRef.current,
           eng.reloadStartTime > 0,
           playerSpeed
         );
@@ -1009,9 +1233,6 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         // -------------------------------------------------------
         // 4. THIRD-PERSON CAMERA SYSTEM (MANUAL ROTATION ONLY)
         // -------------------------------------------------------
-        // The camera NEVER rotates automatically.
-        // It stays strictly fixed at user-controlled cameraYaw and cameraPitch.
-        // As the player moves, the camera translates smoothly with the player without any angle drift or spin.
         const cosPitch = Math.cos(eng.cameraPitch);
         const sinPitch = Math.sin(eng.cameraPitch);
 
@@ -1020,18 +1241,15 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         const rightX = Math.cos(eng.cameraYaw);
         const rightZ = -Math.sin(eng.cameraYaw);
 
-        // Direction the camera is looking
         const lookDirX = forwardX * cosPitch;
         const lookDirY = sinPitch;
         const lookDirZ = forwardZ * cosPitch;
 
-        // Shoulder anchor: slightly offset over the right shoulder so crosshair has clear view
         const shoulderOffset = 0.45;
         const anchorX = eng.playerPos.x + rightX * shoulderOffset;
         const anchorY = eng.playerPos.y + 1.65;
         const anchorZ = eng.playerPos.z + rightZ * shoulderOffset;
 
-        // Position camera behind anchor along reverse look direction
         const targetCamX = anchorX - lookDirX * eng.cameraDistance;
         const targetCamY = Math.max(0.4, anchorY - lookDirY * eng.cameraDistance);
         const targetCamZ = anchorZ - lookDirZ * eng.cameraDistance;
@@ -1040,22 +1258,26 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         eng.camera.lookAt(targetCamX + lookDirX * 50, targetCamY + lookDirY * 50, targetCamZ + lookDirZ * 50);
 
         // -------------------------------------------------------
-        // 5. WAVE SPAWNING & DIFFICULTY PROGRESSION
+        // 5. WAVE SPAWNING & PROGRESSION
         // -------------------------------------------------------
-        const aliveZombies = eng.zombies.filter(z => !z.isDead);
+        let aliveCount = 0;
+        for (let i = 0; i < eng.zombies.length; i++) {
+          if (!eng.zombies[i].isDead) aliveCount++;
+        }
 
         // If wave finished and all zombies dead, trigger next wave!
-        if (eng.waveSpawnedCount >= eng.waveSpawnQuota && aliveZombies.length === 0) {
+        if (eng.waveSpawnedCount >= eng.waveSpawnQuota && aliveCount === 0) {
           if (eng.betweenWavesTimer === 0) {
             eng.betweenWavesTimer = 3.5;
             confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
             zombieAudio.playWaveClear();
-            setWaveAnnouncement(`WAVE ${wave} SURVIVED!`);
+            setWaveAnnouncement(`WAVE ${waveRef.current} SURVIVED!`);
           } else {
             eng.betweenWavesTimer -= delta;
             if (eng.betweenWavesTimer <= 0) {
               eng.betweenWavesTimer = 0;
-              const nextWave = wave + 1;
+              const nextWave = waveRef.current + 1;
+              waveRef.current = nextWave;
               setWave(nextWave);
               eng.waveSpawnQuota = 8 + nextWave * 4;
               eng.waveSpawnedCount = 0;
@@ -1065,20 +1287,21 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           }
         }
 
-        // Spawn next zombie if below quota and interval passed
-        if (eng.waveSpawnedCount < eng.waveSpawnQuota) {
+        // Spawn next zombie if below quota and interval passed and under active cap
+        const maxActiveZombies = isTouchDevice ? 10 : 15;
+        if (eng.waveSpawnedCount < eng.waveSpawnQuota && aliveCount < maxActiveZombies) {
           eng.spawnTimer += delta;
-          const spawnInterval = Math.max(0.6, 2.0 - wave * 0.12);
+          const spawnInterval = Math.max(0.6, 2.0 - waveRef.current * 0.12);
           if (eng.spawnTimer >= spawnInterval) {
             eng.spawnTimer = 0;
             eng.waveSpawnedCount++;
 
-            // Pick zombie type based on wave
             let zType: ZombieType = 'walker';
             const rand = Math.random();
-            if (wave >= 3 && rand < 0.22) {
+            const w = waveRef.current;
+            if (w >= 3 && rand < 0.22) {
               zType = 'brute';
-            } else if (wave >= 2 && rand < 0.45) {
+            } else if (w >= 2 && rand < 0.45) {
               zType = 'runner';
             }
             spawnZombie(zType);
@@ -1086,27 +1309,30 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
         }
 
         // -------------------------------------------------------
-        // 6. ZOMBIE AI (OPTIMIZED PATHING, ATTACKING, RECYCLING)
+        // 6. ZOMBIE AI (OPTIMIZED SQUARED DISTANCE & POOL RETURN)
         // -------------------------------------------------------
+        const doSeparation = (frameCountRef.current % 2 === 0);
+
         for (let i = eng.zombies.length - 1; i >= 0; i--) {
           const z = eng.zombies[i];
           if (z.isDead) {
             z.deathTimer += delta;
             z.meshData.updateAnimation(delta, false, false, true);
             if (z.deathTimer > 2.5) {
-              // Recycle and remove from scene and memory
-              if (eng.scene) eng.scene.remove(z.meshData.group);
+              // Return to object pool instead of disposing!
+              z.meshData.group.visible = false;
+              eng.zombiePool[z.type].push(z.meshData);
               eng.zombies.splice(i, 1);
             }
             continue;
           }
 
           const zPos = z.meshData.group.position;
-          const distToPlayer = Math.hypot(zPos.x - eng.playerPos.x, zPos.z - eng.playerPos.z);
-
-          // Rotate to face player
           const dx = eng.playerPos.x - zPos.x;
           const dz = eng.playerPos.z - zPos.z;
+          const distToPlayerSq = dx * dx + dz * dz;
+
+          // Rotate to face player
           const targetAngle = Math.atan2(dx, dz);
           z.meshData.group.rotation.y = THREE.MathUtils.lerp(
             z.meshData.group.rotation.y,
@@ -1114,8 +1340,9 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             delta * 6
           );
 
-          // Attack when close (< 1.5m)
-          const isAttacking = distToPlayer < (z.type === 'brute' ? 2.0 : 1.4);
+          // Attack when close (< 1.4m for normal, < 2.0m for brute)
+          const attackRadius = z.type === 'brute' ? 2.0 : 1.4;
+          const isAttacking = distToPlayerSq < (attackRadius * attackRadius);
 
           if (isAttacking) {
             z.attackCooldown -= delta;
@@ -1123,16 +1350,13 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
               z.attackCooldown = z.meshData.config.attackInterval;
 
               // Deal damage to player
-              setHealth(prevHp => {
-                const nextHp = Math.max(0, prevHp - z.damage);
-                if (nextHp <= 0) {
-                  // Player Death
-                  setGameMode('GAMEOVER');
-                  zombieAudio.playGameOver();
-                  if (onGameOver) onGameOver(score);
-                }
-                return nextHp;
-              });
+              healthRef.current = Math.max(0, healthRef.current - z.damage);
+              setHealth(healthRef.current);
+              if (healthRef.current <= 0) {
+                handleSetGameMode('GAMEOVER');
+                zombieAudio.playGameOver();
+                if (onGameOverRef.current) onGameOverRef.current(scoreRef.current);
+              }
 
               zombieAudio.playPlayerHit();
               setDamageFlash(true);
@@ -1143,19 +1367,22 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             const forwardX = Math.sin(z.meshData.group.rotation.y);
             const forwardZ = Math.cos(z.meshData.group.rotation.y);
 
-            // Simple separation from nearby zombies
+            // Staggered zombie separation: only runs every alternate frame for subset of zombies
             let sepX = 0;
             let sepZ = 0;
-            for (let j = 0; j < eng.zombies.length; j++) {
-              const other = eng.zombies[j];
-              if (other.id === z.id || other.isDead) continue;
-              const ox = zPos.x - other.meshData.group.position.x;
-              const oz = zPos.z - other.meshData.group.position.z;
-              const d = Math.hypot(ox, oz);
-              if (d < 1.2 && d > 0.01) {
-                const push = (1.2 - d) / d;
-                sepX += ox * push;
-                sepZ += oz * push;
+            if (doSeparation && (z.id + frameCountRef.current) % 3 === 0) {
+              for (let j = 0; j < eng.zombies.length; j++) {
+                const other = eng.zombies[j];
+                if (other.id === z.id || other.isDead) continue;
+                const ox = zPos.x - other.meshData.group.position.x;
+                const oz = zPos.z - other.meshData.group.position.z;
+                const dSq = ox * ox + oz * oz;
+                if (dSq < 1.44 && dSq > 0.0001) {
+                  const invD = 1 / Math.sqrt(dSq);
+                  const push = (1.2 * invD - 1);
+                  sepX += ox * push;
+                  sepZ += oz * push;
+                }
               }
             }
 
@@ -1163,30 +1390,34 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             zPos.z += (forwardZ * z.speed + sepZ * 1.5) * delta;
           }
 
-          z.meshData.updateAnimation(delta, !isAttacking, isAttacking, false);
+          // Animation LOD: skip limb tweening if very far (> 60m)
+          if (distToPlayerSq < 3600) {
+            z.meshData.updateAnimation(delta, !isAttacking, isAttacking, false);
+          }
         }
 
         // -------------------------------------------------------
-        // 7. PARTICLES & BULLETS UPDATE
+        // 7. POOLED PARTICLES & BULLETS UPDATE (ZERO ALLOCATIONS)
         // -------------------------------------------------------
         // Tracers
-        for (let i = eng.bullets.length - 1; i >= 0; i--) {
-          const b = eng.bullets[i];
-          b.life -= delta;
-          if (b.life <= 0) {
-            eng.scene.remove(b.mesh);
-            eng.bullets.splice(i, 1);
+        for (let i = 0; i < eng.tracerPool.length; i++) {
+          const t = eng.tracerPool[i];
+          if (!t.active) continue;
+          t.life -= delta;
+          if (t.life <= 0) {
+            t.active = false;
+            t.mesh.visible = false;
           }
         }
 
         // Spent Shells
-        for (let i = eng.shells.length - 1; i >= 0; i--) {
-          const s = eng.shells[i];
+        for (let i = 0; i < eng.shellPool.length; i++) {
+          const s = eng.shellPool[i];
+          if (!s.active) continue;
           s.life -= delta;
           s.mesh.position.addScaledVector(s.vel, delta);
-          s.vel.y -= 9.8 * delta; // gravity
+          s.vel.y -= 9.8 * delta;
 
-          // Ground bounce
           if (s.mesh.position.y <= 0.03) {
             s.mesh.position.y = 0.03;
             s.vel.y = -s.vel.y * 0.35;
@@ -1198,16 +1429,17 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
           s.mesh.rotation.y += s.rotVel.y * delta;
 
           if (s.life <= 0) {
-            eng.scene.remove(s.mesh);
-            eng.shells.splice(i, 1);
+            s.active = false;
+            s.mesh.visible = false;
           }
         }
 
-        // Impact Sparks
-        for (let i = eng.sparks.length - 1; i >= 0; i--) {
-          const sp = eng.sparks[i];
+        // Impact Blood / Sparks
+        for (let i = 0; i < eng.sparkPool.length; i++) {
+          const sp = eng.sparkPool[i];
+          if (!sp.active) continue;
           sp.life -= delta;
-          const posArr = sp.mesh.geometry.attributes.position.array as Float32Array;
+          const posArr = sp.posAttr.array as Float32Array;
           for (let j = 0; j < sp.vels.length; j++) {
             const v = sp.vels[j];
             posArr[j * 3] += v.x * delta;
@@ -1215,11 +1447,11 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             posArr[j * 3 + 2] += v.z * delta;
             v.y -= 8.0 * delta;
           }
-          sp.mesh.geometry.attributes.position.needsUpdate = true;
+          sp.posAttr.needsUpdate = true;
 
           if (sp.life <= 0) {
-            eng.scene.remove(sp.mesh);
-            eng.sparks.splice(i, 1);
+            sp.active = false;
+            sp.mesh.visible = false;
           }
         }
       }
@@ -1232,9 +1464,12 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
     animate();
 
     return () => {
-      cancelAnimationFrame(eng.animationFrameId);
+      isRunningRef.current = false;
+      if (eng.animationFrameId) {
+        cancelAnimationFrame(eng.animationFrameId);
+      }
     };
-  }, [gameMode, isFiringVisual, wave, score, onGameOver, spawnZombie, fireWeapon, maxAmmo]);
+  }, [fireWeapon, spawnZombie, maxAmmo, handleSetGameMode, isTouchDevice]);
 
   return (
     <div
@@ -1322,7 +1557,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
             <button
               type="button"
               className="zombie-escape__icon-btn"
-              onClick={() => setGameMode('PAUSED')}
+              onClick={() => handleSetGameMode('PAUSED')}
               title="Pause Game (ESC / P)"
             >
               <Pause className="w-4 h-4" />
@@ -1684,7 +1919,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
               <button
                 type="button"
                 className="zombie-escape__primary-btn"
-                onClick={() => setGameMode('PLAYING')}
+                onClick={() => handleSetGameMode('PLAYING')}
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>RESUME</span>
@@ -1702,7 +1937,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
               <button
                 type="button"
                 className="zombie-escape__secondary-btn"
-                onClick={() => setGameMode('MENU')}
+                onClick={() => handleSetGameMode('MENU')}
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>MAIN MENU</span>
@@ -1750,7 +1985,7 @@ export const ZombieEscapeGame: React.FC<GameProps> = ({ onGameOver, onBack }) =>
               <button
                 type="button"
                 className="zombie-escape__secondary-btn"
-                onClick={() => setGameMode('MENU')}
+                onClick={() => handleSetGameMode('MENU')}
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>MAIN MENU</span>
