@@ -40,6 +40,7 @@ import { HauntedHouseGame } from '../games/HauntedHouseGame';
 import { MechaBattleGame } from '../games/MechaBattleGame';
 import { DeepSeaAdventureGame } from '../games/DeepSeaAdventureGame';
 import { GalaxyCommanderGame } from '../games/GalaxyCommanderGame';
+import { TurboTracksGame } from '../games/TurboTracksGame';
 
 interface GamePlayerProps {
   game: GameItem;
@@ -170,11 +171,12 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
       case 'mecha-battle': return <MechaBattleGame key={gameKey} onBack={handleExitGame} />;
       case 'deep-sea-adventure': return <DeepSeaAdventureGame key={gameKey} onBack={handleExitGame} />;
       case 'galaxy-commander': return <GalaxyCommanderGame key={gameKey} onBack={handleExitGame} />;
+      case 'turbo-tracks': return <TurboTracksGame key={gameKey} onBack={handleExitGame} />;
       default: return <NeonDriftGame key={gameKey} onBack={handleExitGame} />;
     }
   };
 
-  const isFullBleedGame = game.slug === 'neon-drift' || game.slug === 'mecha-battle' || game.slug === 'cyber-samurai' || game.slug === 'galaxy-commander' || game.slug === 'desert-racer' || game.slug === 'zombie-escape';
+  const isFullBleedGame = game.slug === 'neon-drift' || game.slug === 'mecha-battle' || game.slug === 'cyber-samurai' || game.slug === 'galaxy-commander' || game.slug === 'desert-racer' || game.slug === 'zombie-escape' || game.slug === 'turbo-tracks';
 
   return (
     <div

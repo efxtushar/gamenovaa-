@@ -28,6 +28,7 @@ import hauntedHouseCover from '../assets/images/haunted_house_cover_178730940803
 import mechaBattleCover from '../assets/images/mecha_battle_cover_1787309112933.jpg';
 import deepSeaCover from '../assets/images/deep_sea_cover_1787309151750.jpg';
 import galaxyCommanderCover from '../assets/images/galaxy_commander_cover_1787309126320.jpg';
+import turboTracksCover from '../assets/images/turbo_tracks_cover_1789742962209.jpg';
 
 export interface GameItem {
   id: string;
@@ -56,6 +57,35 @@ export interface GameItem {
 export type Game = GameItem;
 
 export const INITIAL_GAMES: GameItem[] = [
+  {
+    id: 'g-turbo-tracks',
+    slug: 'turbo-tracks',
+    title: 'Turbo Tracks',
+    category: 'Racing',
+    rating: 4.9,
+    ratingCount: 3840,
+    plays: 142800,
+    featured: true,
+    isNew: true,
+    isTrending: true,
+    isPopular: true,
+    description: 'High-octane miniature toy stunt racing! Defy gravity across giant elevated tracks, power slide through corkscrews, execute 360° flips over massive gaps, and nitro boost past rival toy cars.',
+    instructions: 'Race miniature die-cast speedsters across giant toy room stunt tracks. Hit glowing boost pads, trigger nitro with Shift/Touch, drift around banked turns, and pull crazy aerial flips for stunt combos!',
+    controls: [
+      { key: 'W / ↑', action: 'Accelerate / Front Flip in Air' },
+      { key: 'S / ↓', action: 'Brake / Back Flip in Air' },
+      { key: 'A / D or ← / →', action: 'Steer / Barrel Roll in Air' },
+      { key: 'Spacebar', action: 'Power Drift (Charges Boost)' },
+      { key: 'Shift', action: 'Rocket Nitro Boost' },
+      { key: 'P / Esc', action: 'Pause Race' }
+    ],
+    tags: ['Toy Racing', '3D Stunt', 'Loops & Jumps', 'Drifting', 'Physics', 'Miniature'],
+    themeColor: '#ff5500',
+    accentColor: '#00f0ff',
+    thumbnailUrl: turboTracksCover,
+    developer: 'Nova Studios',
+    releaseYear: '2026'
+  },
   {
     id: 'g-neon-drift',
     slug: 'neon-drift',

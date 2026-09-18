@@ -6,7 +6,8 @@ import {
   User as UserIcon,
   Menu,
   X,
-  Edit3
+  Edit3,
+  LogOut
 } from 'lucide-react';
 import { sound } from '../utils/soundEffects';
 import { useAuth } from '../context/AuthContext';
@@ -35,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfileModal,
   onOpenAdmin: _onOpenAdmin,
 }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -220,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </div>
 
-                  {/* Menu Options: ONLY Profile and Edit Profile */}
+                  {/* Menu Options: Profile, Edit Profile, and Sign Out */}
                   <div className="p-1 space-y-0.5">
                     {onOpenProfileModal && (
                       <button
@@ -229,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setIsUserMenuOpen(false);
                           onOpenProfileModal('overview');
                         }}
-                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#6D28D9] rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors touch-manipulation"
+                        className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#6D28D9] rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors touch-manipulation"
                       >
                         <UserIcon className="w-4 h-4 text-slate-400" />
                         <span>Profile</span>
@@ -243,12 +244,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setIsUserMenuOpen(false);
                           onOpenProfileModal('settings');
                         }}
-                        className="w-full px-3 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#6D28D9] rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors touch-manipulation"
+                        className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-[#6D28D9] rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors touch-manipulation"
                       >
                         <Edit3 className="w-4 h-4 text-slate-400" />
                         <span>Edit Profile</span>
                       </button>
                     )}
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      onClick={() => {
+                        sound.playClick();
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors touch-manipulation"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-500" />
+                      <span>Sign Out</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -284,6 +299,40 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Navigation Drawer */}
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200/80 bg-white px-3 py-3 space-y-1 animate-fade-in shadow-lg">
+          {profile && (
+            <div className="p-2.5 mb-2 rounded-2xl bg-slate-50 border border-slate-200/70 flex items-center justify-between">
+              <div 
+                className="flex items-center gap-2.5 min-w-0 cursor-pointer"
+                onClick={() => {
+                  sound.playClick();
+                  setIsMobileMenuOpen(false);
+                  if (onOpenProfileModal) onOpenProfileModal('overview');
+                }}
+              >
+                <img
+                  src={avatarUrl}
+                  alt={displayUsername}
+                  referrerPolicy="no-referrer"
+                  className={`w-8 h-8 rounded-lg bg-purple-50 object-cover shrink-0 ${frameClass}`}
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[#111827] truncate leading-tight">{displayUsername}</p>
+                  <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">@{profile?.username || 'gamer'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setIsMobileMenuOpen(false);
+                  logout();
+                }}
+                className="px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200/60 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
           {centerNavLinks.map((link) => {
             const isActive = currentTab === link.id;
             return (

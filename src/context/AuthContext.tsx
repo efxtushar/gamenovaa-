@@ -7,7 +7,9 @@ import {
   getDocs,
   addDoc,
   orderBy,
-  limit
+  limit,
+  signOut,
+  auth
 } from '../utils/firebase';
 import { UserCustomization, DEFAULT_CUSTOMIZATION } from '../data/customizationItems';
 
@@ -233,12 +235,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // Reset / Clear local profile
+  // Reset / Clear local profile and sign out
   const logout = () => {
     try {
       localStorage.removeItem(LOCAL_PROFILE_KEY);
     } catch (e) {
       console.warn('[GAMENOVA Profile] Failed to clear local profile:', e);
+    }
+    try {
+      signOut(auth).catch(() => {
+        // safe ignore
+      });
+    } catch {
+      // safe ignore
     }
     setProfile(null);
   };

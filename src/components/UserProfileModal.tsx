@@ -4,7 +4,7 @@ import { GameItem } from '../data/games';
 import { 
   Trophy, Heart, Check, Calendar, Mail, User as UserIcon, ArrowLeft,
   Edit3, Shield, Lock, AlertCircle, Loader2, Sparkles, X, CheckCircle2,
-  Palette, UserCheck, Flame
+  Palette, UserCheck, Flame, LogOut
 } from 'lucide-react';
 import { sound } from '../utils/soundEffects';
 import { GameCard } from './GameCard';
@@ -29,7 +29,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onSelectGame,
   initialTab = 'overview',
 }) => {
-  const { user, profile, username, updateUserProfile, updateCustomization, favorites, toggleFavorite, isAdmin } = useAuth();
+  const { user, profile, username, updateUserProfile, updateCustomization, favorites, toggleFavorite, isAdmin, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'favorites' | 'settings'>(initialTab);
   
   // Edit Profile Form State
@@ -232,7 +232,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
       {/* Top Bar Navigation */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <button
           onClick={onClose}
           className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-[#111827] text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
@@ -241,13 +241,28 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <span>Back to Games</span>
         </button>
 
-        {/* Global Save Toast Notice */}
-        {savedSuccess && (
-          <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 shadow-xs animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Profile & customization saved!</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2.5">
+          {/* Global Save Toast Notice */}
+          {savedSuccess && (
+            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 shadow-xs animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Profile & customization saved!</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              logout();
+              onClose();
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-xs group"
+            title="Sign out of profile"
+          >
+            <LogOut className="w-4 h-4 text-slate-400 group-hover:text-rose-500 transition-colors" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Header Profile Summary Card */}
@@ -893,6 +908,32 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </div>
               </div>
             </form>
+
+            {/* Account Session & Sign Out Card */}
+            <div className="mt-6 p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-sm text-[#111827] flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[#6D28D9]" />
+                  <span>Account Session</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Currently active as <span className="font-mono font-semibold text-slate-700">@{currentUsername}</span>. You can sign out and switch gamer profiles anytime.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  logout();
+                  onClose();
+                }}
+                className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-rose-500" />
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
