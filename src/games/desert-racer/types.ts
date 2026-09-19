@@ -55,6 +55,10 @@ export interface Segment {
   p1: { world: { x: number; y: number; z: number }; screen: { x: number; y: number; w: number; scale: number } };
   p2: { world: { x: number; y: number; z: number }; screen: { x: number; y: number; w: number; scale: number } };
   curve: number;
+  isBridge?: boolean;
+  isTunnel?: boolean;
+  tunnelLight?: boolean;
+  waterBelow?: boolean;
   sprites: {
     type:
       | 'cactus'
@@ -63,6 +67,11 @@ export interface Segment {
       | 'abandoned_structure'
       | 'rock'
       | 'mesa'
+      | 'lookout_tower'
+      | 'canyon_wall'
+      | 'bridge_pillar'
+      | 'tunnel_portal'
+      | 'rock_arch'
       | 'barrier'
       | 'tire_barrier'
       | 'warning_arrow'
@@ -127,6 +136,21 @@ export interface UpgradeLevels {
 }
 
 export const CARS: CarModel[] = [
+  {
+    id: 'apex-gt',
+    name: 'APEX GT',
+    tagline: 'Modern Electric-Blue Performance Sports Car',
+    category: 'HYPER',
+    topSpeed: 248,
+    accel: 0.185,
+    handling: 0.062,
+    drift: 0.92,
+    durability: 80,
+    color: '#0284c7', // Metallic Electric Blue
+    accentColor: '#38bdf8', // Vivid Cyan Gloss
+    stripeColor: '#090d16', // Dark Racing Carbon Stripes
+    stats: { speed: 96, accel: 90, handling: 88, drift: 92, boost: 96, braking: 90, durability: 80 }
+  },
   {
     id: 'dune-raider',
     name: 'DUNE RAIDER',

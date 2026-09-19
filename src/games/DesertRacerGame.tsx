@@ -102,6 +102,7 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       if (saved) return JSON.parse(saved);
     } catch {}
     return {
+      'apex-gt': 1,
       'dune-raider': 1,
       'sandstorm-gt': 0,
       'apex-buggy': 0,
@@ -377,26 +378,26 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
 
       // ─────────────────────────────────────────────────────────────
       // CLOSED-LOOP DESERT RACING CIRCUIT GEOMETRY
-      // 0 - 55: Start Grid / Straight
-      // 55 - 180: Sweeping Left Turn → CHECKPOINT 1 (seg 180)
-      // 180 - 320: Canyon Sweep & Crest → CHECKPOINT 2 (seg 320)
-      // 320 - 460: Technical Bends → CHECKPOINT 3 (seg 460)
-      // 460 - 620: Braking Zone & 180° Technical HAIRPIN
-      // 620 - 760: Approach & Rapid Left-Right S-CURVE (CHICANE)
-      // 760 - 860: Elevation DUNE JUMP RAMP
-      // 860 - 999: FINAL STRAIGHT → FINISH LINE (seg 0)
+      // 0 - 60: Start Grid / Straight
+      // 60 - 190: RED-ROCK CANYON GORGE & MONOLITHS → CP 1 (seg 180)
+      // 190 - 330: CANYON RIVER SUSPENSION BRIDGE → CP 2 (seg 320)
+      // 330 - 465: MESA TUNNEL & CAVERN ENTRANCE → CP 3 (seg 460)
+      // 465 - 620: Braking Zone & 180° Technical CANYON HAIRPIN
+      // 620 - 760: S-CURVE CHICANE & OASIS PASS
+      // 760 - 860: Elevation DUNE JUMP RAMP & AIRTIME ZONE
+      // 860 - 999: HIGH-SPEED DESERT HIGHWAY → FINISH LINE (seg 0)
       // ─────────────────────────────────────────────────────────────
 
       // Curvature Profile
-      if (i >= 65 && i <= 145) {
-        // Sector 1: Sweeping Left Turn leading towards Checkpoint 1
-        curve = -Math.sin(((i - 65) / 80) * Math.PI) * 3.2 * track.curveFrequency;
-      } else if (i >= 220 && i <= 290) {
-        // Sector 2: Sweeping Right Bend leading towards Checkpoint 2
-        curve = Math.sin(((i - 220) / 70) * Math.PI) * 3.4 * track.curveFrequency;
-      } else if (i >= 335 && i <= 415) {
-        // Sector 3: Technical Left Bend leading towards Checkpoint 3
-        curve = -Math.sin(((i - 335) / 80) * Math.PI) * 2.9 * track.curveFrequency;
+      if (i >= 65 && i <= 155) {
+        // Sector 1: Canyon Gorge Left Sweep leading to Checkpoint 1
+        curve = -Math.sin(((i - 65) / 90) * Math.PI) * 3.3 * track.curveFrequency;
+      } else if (i >= 210 && i <= 300) {
+        // Sector 2: Bridge Curve over Canyon River
+        curve = Math.sin(((i - 210) / 90) * Math.PI) * 3.1 * track.curveFrequency;
+      } else if (i >= 340 && i <= 420) {
+        // Sector 3: Mountain Mesa Tunnel curving bend
+        curve = -Math.sin(((i - 340) / 80) * Math.PI) * 2.8 * track.curveFrequency;
       } else if (i >= 495 && i <= 600) {
         // Sector 4: THE 180° TECHNICAL RIGHT HAIRPIN!
         curve = Math.sin(((i - 495) / 105) * Math.PI) * 5.8 * track.curveFrequency;
@@ -409,9 +410,9 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       }
 
       // Elevation Profile (Balanced waves so curY returns to 0 at segment 1000)
-      if (i >= 220 && i <= 280) {
-        // Sector 2: Rolling desert dune ridge
-        hill = Math.sin(((i - 220) / 60) * 2 * Math.PI) * 320 * track.hillFrequency;
+      if (i >= 195 && i <= 315) {
+        // Sector 2: Bridge elevated crest over the canyon river gorge
+        hill = Math.sin(((i - 195) / 120) * 2 * Math.PI) * 360 * track.hillFrequency;
       } else if (i >= 780 && i <= 840) {
         // Sector 6: THE DUNE JUMP RAMP! Ascends steeply, crests at seg 810, then descends
         hill = Math.sin(((i - 780) / 60) * 2 * Math.PI) * 720 * track.hillFrequency;
@@ -420,11 +421,29 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       curY += hill * 0.05;
 
       const isAlt = Math.floor(i / 3) % 2 === 0;
-      const roadColor = isAlt ? '#222428' : '#181a1d';
-      const grassColor = isAlt ? '#c27838' : '#ba6e2c';
-      const rumbleColor = isAlt ? '#ef4444' : '#f8fafc';
+      const isBridge = i >= 210 && i <= 310;
+      const isTunnel = i >= 350 && i <= 445;
+      const waterBelow = isBridge;
+      const tunnelLight = isTunnel && (i % 10 === 0);
+
+      // Custom road styling per biome
+      let roadColor = isAlt ? '#222428' : '#181a1d';
+      let grassColor = isAlt ? '#c27838' : '#ba6e2c';
+      let rumbleColor = isAlt ? '#ef4444' : '#f8fafc';
       const laneColor = isAlt ? '#f8fafc' : 'transparent';
-      const shoulderColor = isAlt ? '#b45309' : '#92400e';
+      let shoulderColor = isAlt ? '#b45309' : '#92400e';
+
+      if (isTunnel) {
+        roadColor = isAlt ? '#131417' : '#0d0e10';
+        grassColor = isAlt ? '#2d150b' : '#231008';
+        rumbleColor = isAlt ? '#f59e0b' : '#334155';
+        shoulderColor = '#1c0d06';
+      } else if (isBridge) {
+        roadColor = isAlt ? '#27272a' : '#1e1e24';
+        grassColor = isAlt ? '#0e7490' : '#0891b2'; // Canyon river water below!
+        rumbleColor = isAlt ? '#ffffff' : '#ef4444';
+        shoulderColor = '#3b82f6';
+      }
 
       const sprites: Segment['sprites'] = [];
 
@@ -439,34 +458,57 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       }
 
       // ── START GRID & FINAL STRAIGHT (0-55 and 860-999) ──
-      // Racing Team Flags on metal poles along both sides of the straight
       if ((i >= 2 && i <= 50 && i % 8 === 0) || (i >= 870 && i <= 995 && i % 10 === 0)) {
         sprites.push({ type: 'flag', offset: -1.45 });
         sprites.push({ type: 'flag', offset: 1.45 });
       }
-      // Fictional Sponsor Banners on Straights
-      if (i === 15 || i === 30 || i === 45 || i === 205 || i === 615 || i === 890 || i === 940) {
+      if (i === 15 || i === 35 || i === 50 || i === 885 || i === 940) {
         sprites.push({ type: 'sponsor_banner', offset: -1.38 });
         sprites.push({ type: 'sponsor_banner', offset: 1.38 });
       }
 
-      // ── SECTOR 1: SWEEPING LEFT (65-145) ──
+      // ── SECTOR 1: RED-ROCK CANYON GORGE (70-190) ──
+      // Towering sheer sandstone canyon monoliths lining the narrow pass
+      if (i >= 70 && i <= 185 && i % 14 === 0) {
+        sprites.push({ type: 'canyon_wall', offset: -1.75 });
+        sprites.push({ type: 'canyon_wall', offset: 1.75 });
+      }
+      if (i === 115) {
+        sprites.push({ type: 'rock_arch', offset: 0 }); // Natural red sandstone arch spanning over road
+      }
       if (i >= 80 && i <= 140 && i % 20 === 0) {
         sprites.push({ type: 'sign_left', offset: 1.35 });
       }
 
-      // ── SECTOR 2: SWEEPING RIGHT (220-290) ──
-      if (i >= 230 && i <= 285 && i % 20 === 0) {
-        sprites.push({ type: 'sign_right', offset: -1.35 });
+      // ── SECTOR 2: CANYON RIVER SUSPENSION BRIDGE (210-310) ──
+      if (i === 200) {
+        sprites.push({ type: 'lookout_tower', offset: 1.9 }); // Wooden lookout tower watching over river
+      }
+      if (i === 210 || i === 260 || i === 310) {
+        sprites.push({ type: 'bridge_pillar', offset: -1.4 });
+        sprites.push({ type: 'bridge_pillar', offset: 1.4 });
+      }
+      if (i >= 215 && i <= 305 && i % 8 === 0) {
+        sprites.push({ type: 'barrier', offset: -1.28 });
+        sprites.push({ type: 'barrier', offset: 1.28 });
+      }
+      if (i === 318) {
+        sprites.push({ type: 'lookout_tower', offset: -1.9 }); // Second lookout tower on bridge exit
       }
 
-      // ── SECTOR 3: TECHNICAL LEFT (335-415) ──
-      if (i >= 345 && i <= 410 && i % 20 === 0) {
-        sprites.push({ type: 'sign_left', offset: 1.35 });
+      // ── SECTOR 3: MESA TUNNEL (350-445) ──
+      if (i === 350) {
+        sprites.push({ type: 'tunnel_portal', offset: 0 }); // Grand mountain tunnel entrance
+      }
+      if (i === 445) {
+        sprites.push({ type: 'tunnel_portal', offset: 0 }); // Tunnel exit
+      }
+      if (i >= 335 && i <= 348 && i % 5 === 0) {
+        sprites.push({ type: 'canyon_wall', offset: -1.65 });
+        sprites.push({ type: 'canyon_wall', offset: 1.65 });
       }
 
-      // ── SECTOR 4: THE HAIRPIN (460-620) ──
-      // Distance countdown boards before braking zone
+      // ── SECTOR 4: THE 180° CANYON HAIRPIN (465-620) ──
       if (i === 465) {
         sprites.push({ type: 'sign_distance_300', offset: 1.35 });
       } else if (i === 475) {
@@ -478,17 +520,16 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       if (i === 490) {
         sprites.push({ type: 'sign_hairpin', offset: 1.35 });
       }
-      // Hairpin apex chevrons, continuous outer tire barriers, and rock cliff walls
+      if (i === 545) {
+        sprites.push({ type: 'lookout_tower', offset: -2.0 }); // High lookout tower at hairpin apex
+      }
       if (i >= 495 && i <= 600) {
-        // Red/white tire barrier wall along the entire outside edge of the hairpin
         if (i % 3 === 0) {
           sprites.push({ type: 'barrier', offset: -1.35 });
         }
-        // Sandstone canyon cliff towering on outside
         if (i % 12 === 0) {
-          sprites.push({ type: 'cliff', offset: -1.85 });
+          sprites.push({ type: 'canyon_wall', offset: -1.85 });
         }
-        // Apex direction chevrons
         if (i % 25 === 0) {
           sprites.push({ type: 'sign_right', offset: -1.35 });
         }
@@ -516,29 +557,23 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         sprites.push({ type: 'flag', offset: 1.4 });
       }
 
-      // ── DESERT ENVIRONMENT PROPS: Dunes, Cacti, Rocks, Mesas, Tumbleweeds, Palms, Outposts ──
-      // Scenic Oasis Palm Trees
-      if ((i >= 150 && i <= 210 && i % 8 === 0) || (i >= 860 && i <= 930 && i % 10 === 0)) {
+      // ── SCENIC DESERT PROPS: Cacti, Palms, Boulders, Dunes, Mesas, Outposts ──
+      if ((i >= 150 && i <= 200 && i % 8 === 0) || (i >= 860 && i <= 920 && i % 10 === 0)) {
         const side = (i % 2 === 0 ? 1 : -1) * (1.75 + ((i * 13) % 40) / 30);
         sprites.push({ type: 'palm_tree', offset: side });
       }
-
-      // Desert Outposts & Weathered Structures
-      if (i === 70 || i === 260 || i === 440 || i === 750) {
+      if (i === 68 || i === 455 || i === 752) {
         sprites.push({ type: 'abandoned_structure', offset: i % 2 === 0 ? 2.1 : -2.1 });
       }
-
-      // High-visibility Chevron Warning Arrows in sharp bends
       if (i === 480 || i === 520 || i === 565 || i === 655 || i === 715) {
         sprites.push({ type: 'warning_arrow', offset: i === 520 ? -1.38 : 1.38 });
       }
-
-      // Tire Barrier Walls along sharp apexes
       if ((i >= 490 && i <= 580 && i % 6 === 0) || (i >= 645 && i <= 725 && i % 8 === 0)) {
         sprites.push({ type: 'tire_barrier', offset: i < 600 ? -1.32 : 1.32 });
       }
 
-      if (i > 8 && i % 5 === 0 && i !== 180 && i !== 320 && i !== 460) {
+      // Distributed desert flora and rock formations outside bridge/tunnel
+      if (!isBridge && !isTunnel && i > 8 && i % 5 === 0 && !CHECKPOINT_SEGMENTS.includes(i)) {
         const side = (i % 2 === 0 ? 1 : -1) * (1.75 + ((i * 19) % 100) / 45);
         const r = ((i * 37) % 100) / 100;
         if (r < 0.22) {
@@ -547,7 +582,7 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
           sprites.push({ type: 'cactus_group', offset: side });
         } else if (r < 0.58) {
           sprites.push({ type: 'rock', offset: side });
-        } else if (r < 0.78) {
+        } else if (r < 0.76) {
           sprites.push({ type: 'dune', offset: side * 1.5 });
         } else if (r < 0.90) {
           sprites.push({ type: 'mesa', offset: side * 2.0 });
@@ -561,6 +596,10 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         p1: { world: { x: 0, y: curY, z: z1 }, screen: { x: 0, y: 0, w: 0, scale: 0 } },
         p2: { world: { x: 0, y: curY + hill * 0.05, z: z2 }, screen: { x: 0, y: 0, w: 0, scale: 0 } },
         curve,
+        isBridge,
+        isTunnel,
+        tunnelLight,
+        waterBelow,
         sprites,
         color: {
           road: roadColor,
@@ -1294,35 +1333,98 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.55);
       const colors = selectedTrack.skyGradient;
       skyGrad.addColorStop(0, colors[0]);
-      skyGrad.addColorStop(0.5, colors[1]);
+      skyGrad.addColorStop(0.55, colors[1]);
       skyGrad.addColorStop(1, colors[2]);
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height * 0.55);
 
-      // Distant Desert Sun / Golden Light
-      const sunGrad = ctx.createRadialGradient(width * 0.65, height * 0.28, 10, width * 0.65, height * 0.28, 160);
-      sunGrad.addColorStop(0, 'rgba(254, 240, 138, 0.9)');
-      sunGrad.addColorStop(0.4, 'rgba(251, 146, 60, 0.45)');
+      // Fluffy Desert Cumulus Clouds Drifting Across Sky
+      const cloudTime = s.time * 0.15;
+      const clouds = [
+        { x: (width * 0.12 + cloudTime * 18) % (width + 240) - 120, y: height * 0.14, w: 140, h: 36 },
+        { x: (width * 0.48 + cloudTime * 14) % (width + 240) - 120, y: height * 0.08, w: 190, h: 46 },
+        { x: (width * 0.82 + cloudTime * 20) % (width + 240) - 120, y: height * 0.18, w: 120, h: 32 }
+      ];
+      clouds.forEach(c => {
+        ctx.fillStyle = 'rgba(255, 247, 237, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, c.w * 0.5, c.h * 0.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(c.x - c.w * 0.22, c.y + 4, c.w * 0.35, c.h * 0.45, 0, 0, Math.PI * 2);
+        ctx.ellipse(c.x + c.w * 0.24, c.y + 2, c.w * 0.38, c.h * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Warm golden sunlight highlight on cloud tops
+        ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y - c.h * 0.2, c.w * 0.35, c.h * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Radiant Desert Sun with Multi-ring Corona and Lens Flare
+      const sunX = width * 0.68;
+      const sunY = height * 0.24;
+      const sunGrad = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, 200);
+      sunGrad.addColorStop(0, 'rgba(255, 255, 240, 0.95)');
+      sunGrad.addColorStop(0.2, 'rgba(254, 240, 138, 0.65)');
+      sunGrad.addColorStop(0.5, 'rgba(251, 146, 60, 0.25)');
       sunGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = sunGrad;
       ctx.beginPath();
-      ctx.arc(width * 0.65, height * 0.28, 160, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 200, 0, Math.PI * 2);
       ctx.fill();
 
-      // Distant Rocky Mountains / Mesa Silhouettes
-      ctx.fillStyle = '#451a03';
+      // Sun core disc
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Far Background Canyon Buttes & Mesas (Deep Crimson Purple)
+      ctx.fillStyle = '#3b0764';
+      ctx.globalAlpha = 0.55;
       ctx.beginPath();
       ctx.moveTo(0, height * 0.55);
-      ctx.lineTo(width * 0.15, height * 0.46);
-      ctx.lineTo(width * 0.28, height * 0.52);
-      ctx.lineTo(width * 0.45, height * 0.42);
-      ctx.lineTo(width * 0.62, height * 0.5);
-      ctx.lineTo(width * 0.78, height * 0.44);
+      ctx.lineTo(width * 0.08, height * 0.44);
+      ctx.lineTo(width * 0.18, height * 0.44);
+      ctx.lineTo(width * 0.22, height * 0.52);
+      ctx.lineTo(width * 0.38, height * 0.42);
+      ctx.lineTo(width * 0.48, height * 0.42);
+      ctx.lineTo(width * 0.54, height * 0.52);
+      ctx.lineTo(width * 0.72, height * 0.40);
+      ctx.lineTo(width * 0.85, height * 0.40);
       ctx.lineTo(width * 0.92, height * 0.51);
-      ctx.lineTo(width, height * 0.48);
+      ctx.lineTo(width, height * 0.46);
       ctx.lineTo(width, height * 0.55);
       ctx.closePath();
       ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      // Midground Majestic Red Sandstone Mesas & Layered Strata
+      ctx.fillStyle = '#7c2d12';
+      ctx.beginPath();
+      ctx.moveTo(0, height * 0.55);
+      ctx.lineTo(0, height * 0.50);
+      ctx.lineTo(width * 0.12, height * 0.45);
+      ctx.lineTo(width * 0.26, height * 0.45);
+      ctx.lineTo(width * 0.32, height * 0.54);
+      ctx.lineTo(width * 0.45, height * 0.47);
+      ctx.lineTo(width * 0.58, height * 0.47);
+      ctx.lineTo(width * 0.65, height * 0.53);
+      ctx.lineTo(width * 0.80, height * 0.43);
+      ctx.lineTo(width * 0.94, height * 0.43);
+      ctx.lineTo(width, height * 0.52);
+      ctx.lineTo(width, height * 0.55);
+      ctx.closePath();
+      ctx.fill();
+
+      // Geological strata horizontal bands on midground mesas
+      ctx.fillStyle = '#9a3412';
+      ctx.fillRect(0, height * 0.49, width, 4);
+      ctx.fillStyle = '#c2410c';
+      ctx.fillRect(0, height * 0.51, width, 3);
 
       // Desert Sand Ground
       ctx.fillStyle = '#ba6e2c';
@@ -1391,9 +1493,52 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
 
         if (p1.y <= p2.y || p2.y >= height) continue;
 
-        // Sand Terrain
-        ctx.fillStyle = seg.color.grass;
-        ctx.fillRect(0, p2.y, width, p1.y - p2.y);
+        // Sand Terrain, Canyon River Gorge, or Mountain Cavern
+        if (seg.isTunnel) {
+          // Dark Mountain Cavern interior
+          ctx.fillStyle = seg.color.grass;
+          ctx.fillRect(0, p2.y, width, p1.y - p2.y);
+          // Tunnel Ceiling arch enclosing the road overhead
+          const ceilH1 = Math.max(16, p1.w * 0.95);
+          const ceilH2 = Math.max(16, p2.w * 0.95);
+          ctx.fillStyle = '#1c0d06';
+          ctx.beginPath();
+          ctx.moveTo(p1.x - p1.w * 1.5, p1.y - ceilH1);
+          ctx.lineTo(p1.x + p1.w * 1.5, p1.y - ceilH1);
+          ctx.lineTo(p2.x + p2.w * 1.5, p2.y - ceilH2);
+          ctx.lineTo(p2.x - p2.w * 1.5, p2.y - ceilH2);
+          ctx.closePath();
+          ctx.fill();
+
+          // Amber sodium lights on tunnel ceiling/walls
+          if (seg.tunnelLight) {
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.45)';
+            ctx.beginPath();
+            ctx.arc(p1.x - p1.w * 1.1, p1.y - ceilH1 * 0.7, Math.max(4, p1.w * 0.08), 0, Math.PI * 2);
+            ctx.arc(p1.x + p1.w * 1.1, p1.y - ceilH1 * 0.7, Math.max(4, p1.w * 0.08), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (seg.isBridge) {
+          // Canyon River Gorge: Sandstone cliffs on sides + sparkling turquoise canyon river flowing below
+          ctx.fillStyle = '#7c2d12'; // canyon gorge walls
+          ctx.fillRect(0, p2.y, width, p1.y - p2.y);
+
+          // Turquoise River water flowing beneath bridge
+          const riverW = width * 0.48;
+          const riverX = width / 2;
+          ctx.fillStyle = seg.color.grass; // '#0e7490' / '#0891b2'
+          ctx.fillRect(riverX - riverW, p2.y, riverW * 2, p1.y - p2.y);
+
+          // Water wave shimmer ripples
+          if (seg.index % 2 === 0) {
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.fillRect(riverX - riverW * 0.65, p2.y, riverW * 1.3, Math.max(1, (p1.y - p2.y) * 0.4));
+          }
+        } else {
+          // Sand Terrain
+          ctx.fillStyle = seg.color.grass;
+          ctx.fillRect(0, p2.y, width, p1.y - p2.y);
+        }
 
         // Sand Shoulder (Tougher desert gravel shoulder outside curbs)
         if (seg.color.shoulder) {
@@ -1430,6 +1575,32 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
         ctx.lineTo(p2.x - p2.w, p2.y);
         ctx.closePath();
         ctx.fill();
+
+        // If Bridge: Draw Steel Suspension Truss Guardrails along road sides
+        if (seg.isBridge) {
+          const railH1 = Math.max(4, p1.w * 0.14);
+          const railH2 = Math.max(4, p2.w * 0.14);
+          [-1, 1].forEach(side => {
+            const rx1 = p1.x + side * p1.w * 1.08;
+            const rx2 = p2.x + side * p2.w * 1.08;
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.moveTo(rx1, p1.y);
+            ctx.lineTo(rx1, p1.y - railH1);
+            ctx.lineTo(rx2, p2.y - railH2);
+            ctx.lineTo(rx2, p2.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Top chrome rail
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = Math.max(1, p1.scale * 2);
+            ctx.beginPath();
+            ctx.moveTo(rx1, p1.y - railH1);
+            ctx.lineTo(rx2, p2.y - railH2);
+            ctx.stroke();
+          });
+        }
 
         // High-Contrast Solid White Road Edge Boundary Lines
         const ew1 = Math.max(2, p1.w * 0.03);
@@ -1626,6 +1797,187 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
             ctx.fillStyle = '#d97706';
             ctx.font = `bold ${Math.max(7, Math.round(spriteScale * 0.065))}px sans-serif`;
             ctx.fillText('DESERT RACER CHAMPIONSHIP', p1.x, spriteY - spriteScale * 0.76);
+          } else if (sprite.type === 'lookout_tower') {
+            // Rustic Multi-level Wooden Desert Observation / Lookout Tower
+            const tW = spriteScale * 0.75;
+            const tH = spriteScale * 1.55;
+            
+            // 4 Sturdy Wooden Timber Stilts
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(spriteX - tW * 0.42, spriteY - tH * 0.75, tW * 0.08, tH * 0.75);
+            ctx.fillRect(spriteX + tW * 0.34, spriteY - tH * 0.75, tW * 0.08, tH * 0.75);
+            ctx.fillRect(spriteX - tW * 0.22, spriteY - tH * 0.75, tW * 0.07, tH * 0.75);
+            ctx.fillRect(spriteX + tW * 0.15, spriteY - tH * 0.75, tW * 0.07, tH * 0.75);
+
+            // Diagonal Timber Cross-Braces
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = Math.max(1, spriteScale * 0.02);
+            ctx.beginPath();
+            ctx.moveTo(spriteX - tW * 0.4, spriteY - tH * 0.72);
+            ctx.lineTo(spriteX + tW * 0.4, spriteY - tH * 0.25);
+            ctx.moveTo(spriteX + tW * 0.4, spriteY - tH * 0.72);
+            ctx.lineTo(spriteX - tW * 0.4, spriteY - tH * 0.25);
+            ctx.stroke();
+
+            // Central Access Ladder
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(spriteX - tW * 0.05, spriteY - tH * 0.75, tW * 0.1, tH * 0.75);
+            for (let rung = 1; rung < 6; rung++) {
+              ctx.fillRect(spriteX - tW * 0.08, spriteY - (tH * 0.75 * (rung / 6)), tW * 0.16, Math.max(1.5, tH * 0.02));
+            }
+
+            // High Observation Platform Deck
+            ctx.fillStyle = '#92400e';
+            ctx.fillRect(spriteX - tW * 0.52, spriteY - tH * 0.78, tW * 1.04, tH * 0.06);
+
+            // Safety Wooden Railings
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = Math.max(1.5, spriteScale * 0.025);
+            ctx.strokeRect(spriteX - tW * 0.5, spriteY - tH * 0.95, tW * 1.0, tH * 0.17);
+
+            // Watch Cabin / Canopy
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(spriteX - tW * 0.32, spriteY - tH * 0.95, tW * 0.64, tH * 0.17);
+            ctx.fillStyle = '#fde047'; // Warm lit lantern window
+            ctx.fillRect(spriteX - tW * 0.12, spriteY - tH * 0.90, tW * 0.24, tH * 0.08);
+
+            // Pitched Timber Sun Roof
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.moveTo(spriteX - tW * 0.56, spriteY - tH * 0.95);
+            ctx.lineTo(spriteX, spriteY - tH * 1.12);
+            ctx.lineTo(spriteX + tW * 0.56, spriteY - tH * 0.95);
+            ctx.closePath();
+            ctx.fill();
+          } else if (sprite.type === 'canyon_wall') {
+            // Massive Layered Red-Rock Sandstone Canyon Monolith & Cliffs
+            const cW = spriteScale * 1.7;
+            const cH = spriteScale * 2.8;
+
+            // Jagged Monolith Silhouette
+            ctx.fillStyle = '#7c2d12';
+            ctx.beginPath();
+            ctx.moveTo(spriteX - cW * 0.5, spriteY);
+            ctx.lineTo(spriteX - cW * 0.52, spriteY - cH * 0.6);
+            ctx.lineTo(spriteX - cW * 0.42, spriteY - cH * 0.9);
+            ctx.lineTo(spriteX - cW * 0.15, spriteY - cH * 1.0);
+            ctx.lineTo(spriteX + cW * 0.35, spriteY - cH * 0.95);
+            ctx.lineTo(spriteX + cW * 0.52, spriteY - cH * 0.5);
+            ctx.lineTo(spriteX + cW * 0.5, spriteY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Horizontal Sedimentary Strata Bands
+            const strataColors = ['#9a3412', '#c2410c', '#451a03', '#ea580c', '#7c2d12'];
+            strataColors.forEach((col, idx) => {
+              ctx.fillStyle = col;
+              ctx.fillRect(spriteX - cW * 0.48, spriteY - cH * (0.2 + idx * 0.16), cW * 0.96, cH * 0.08);
+            });
+
+            // Golden Desert Sun Highlight along outer face
+            ctx.fillStyle = 'rgba(254, 240, 138, 0.22)';
+            ctx.beginPath();
+            ctx.moveTo(spriteX - cW * 0.15, spriteY - cH * 1.0);
+            ctx.lineTo(spriteX + cW * 0.35, spriteY - cH * 0.95);
+            ctx.lineTo(spriteX + cW * 0.45, spriteY);
+            ctx.lineTo(spriteX + cW * 0.25, spriteY);
+            ctx.closePath();
+            ctx.fill();
+          } else if (sprite.type === 'rock_arch') {
+            // Natural Sandstone Canyon Arch Spanning Scenery
+            const aW = p1.w * 2.4;
+            const aH = spriteScale * 1.6;
+
+            ctx.fillStyle = '#7c2d12';
+            // Left canyon pillar
+            ctx.fillRect(p1.x - aW * 0.55, spriteY - aH, aW * 0.25, aH);
+            // Right canyon pillar
+            ctx.fillRect(p1.x + aW * 0.3, spriteY - aH, aW * 0.25, aH);
+            // Natural stone arch spanning overhead
+            ctx.beginPath();
+            ctx.ellipse(p1.x, spriteY - aH * 0.92, aW * 0.55, aH * 0.35, 0, Math.PI, 0);
+            ctx.lineTo(p1.x + aW * 0.55, spriteY - aH * 0.7);
+            ctx.ellipse(p1.x, spriteY - aH * 0.7, aW * 0.35, aH * 0.25, 0, 0, Math.PI, true);
+            ctx.closePath();
+            ctx.fill();
+
+            // Sandstone strata highlights
+            ctx.fillStyle = '#c2410c';
+            ctx.fillRect(p1.x - aW * 0.55, spriteY - aH * 0.5, aW * 0.25, aH * 0.08);
+            ctx.fillRect(p1.x + aW * 0.3, spriteY - aH * 0.5, aW * 0.25, aH * 0.08);
+          } else if (sprite.type === 'tunnel_portal') {
+            // Massive Mountain Mesa Tunnel Entrance Portal
+            const tW = p1.w * 2.6;
+            const tH = spriteScale * 1.5;
+
+            // Mountain Rock Facade
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(p1.x - tW * 0.55, spriteY - tH * 1.2, tW * 1.1, tH * 1.2);
+
+            // Dark Cavern Arch Opening
+            ctx.fillStyle = '#090402';
+            ctx.beginPath();
+            ctx.ellipse(p1.x, spriteY - tH * 0.5, tW * 0.42, tH * 0.5, 0, Math.PI, 0);
+            ctx.lineTo(p1.x + tW * 0.42, spriteY);
+            ctx.lineTo(p1.x - tW * 0.42, spriteY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Reinforced Concrete Arch Portal Frame
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = Math.max(2, spriteScale * 0.05);
+            ctx.beginPath();
+            ctx.ellipse(p1.x, spriteY - tH * 0.5, tW * 0.42, tH * 0.5, 0, Math.PI, 0);
+            ctx.stroke();
+
+            // Hazard Warning Stripes on Tunnel Arch
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(p1.x - tW * 0.48, spriteY - tH * 1.05, tW * 0.96, tH * 0.12);
+            ctx.fillStyle = '#0f172a';
+            ctx.font = `black italic ${Math.max(8, Math.round(tH * 0.08))}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('⚠️ CANYON TUNNEL PASSAGE ⚠️', p1.x, spriteY - tH * 0.96);
+
+            // Flashing Red Warning Beacons
+            ctx.fillStyle = '#ef4444';
+            ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(p1.x - tW * 0.44, spriteY - tH * 1.1, Math.max(3, spriteScale * 0.035), 0, Math.PI * 2);
+            ctx.arc(p1.x + tW * 0.44, spriteY - tH * 1.1, Math.max(3, spriteScale * 0.035), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          } else if (sprite.type === 'bridge_pillar') {
+            // Colossal Concrete & Steel Bridge Suspension Pylon
+            const pW = spriteScale * 0.52;
+            const pH = spriteScale * 2.2;
+
+            // Concrete Support Column Base
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(spriteX - pW * 0.5, spriteY - pH, pW, pH);
+
+            // Inner Steel Struts
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(spriteX - pW * 0.28, spriteY - pH * 0.85, pW * 0.56, pH * 0.7);
+
+            // Diagonal Steel Suspension Cables
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = Math.max(1, spriteScale * 0.015);
+            ctx.beginPath();
+            ctx.moveTo(spriteX, spriteY - pH);
+            ctx.lineTo(p1.x - p1.w * 0.9, spriteY);
+            ctx.moveTo(spriteX, spriteY - pH);
+            ctx.lineTo(p1.x + p1.w * 0.9, spriteY);
+            ctx.stroke();
+
+            // High-altitude Beacon on Top
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(spriteX, spriteY - pH, Math.max(3, spriteScale * 0.03), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
           } else if (sprite.type === 'sign_hairpin') {
             // Reflective Warning Signboard: 180° Hairpin Ahead
             const sW = spriteScale * 0.65;
@@ -2066,11 +2418,22 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.ellipse(0, 16 + p.y, carW * 0.52 * shadowScale, 18 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Forward Headlight Beams illuminating the asphalt ahead
+      // Electric-Blue Underglow Neon Glow when Boosting or Driving Fast
+      if (p.isBoosting || p.speed > 8) {
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.35)';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = p.isBoosting ? 28 : 14;
+        ctx.beginPath();
+        ctx.ellipse(0, 14 + p.y, carW * 0.48, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Forward High-Performance Xenon Headlight Beams illuminating the road ahead
       ctx.save();
       const beamGradL = ctx.createLinearGradient(-35, -carH * 0.6, -80, -carH * 3.5);
-      beamGradL.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
-      beamGradL.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      beamGradL.addColorStop(0, 'rgba(186, 230, 253, 0.45)');
+      beamGradL.addColorStop(1, 'rgba(186, 230, 253, 0)');
       ctx.fillStyle = beamGradL;
       ctx.beginPath();
       ctx.moveTo(-35, -carH * 0.6);
@@ -2080,8 +2443,8 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.fill();
 
       const beamGradR = ctx.createLinearGradient(35, -carH * 0.6, 80, -carH * 3.5);
-      beamGradR.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
-      beamGradR.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      beamGradR.addColorStop(0, 'rgba(186, 230, 253, 0.45)');
+      beamGradR.addColorStop(1, 'rgba(186, 230, 253, 0)');
       ctx.fillStyle = beamGradR;
       ctx.beginPath();
       ctx.moveTo(35, -carH * 0.6);
@@ -2091,95 +2454,200 @@ export const DesertRacerGame: React.FC<GameProps> = ({ onGameOver, onBack }) => 
       ctx.fill();
       ctx.restore();
 
-      // Large Desert Off-Road Tires with Alloy Hubs
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(-carW * 0.54, -20, 32, 48);
-      ctx.fillRect(carW * 0.54 - 32, -20, 32, 48);
-      // Alloy wheel rims
-      ctx.fillStyle = '#71717a';
-      ctx.fillRect(-carW * 0.54 + 6, -14, 20, 36);
-      ctx.fillRect(carW * 0.54 - 26, -14, 20, 36);
+      // Premium Wide Low-Profile Rear Racing Tires
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(-carW * 0.54, -18, 30, 44);
+      ctx.fillRect(carW * 0.54 - 30, -18, 30, 44);
 
+      // 5-Spoke Machined Alloy Wheel Hubs with Visible Red Performance Brake Calipers
+      [-carW * 0.54 + 15, carW * 0.54 - 15].forEach(wheelCenter => {
+        // Red Brake Caliper
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(wheelCenter - 6, -10, 12, 10);
+        // Titanium Wheel Lip & Rim
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.arc(wheelCenter, 4, 11, 0, Math.PI * 2);
+        ctx.fill();
+        // Dark Inner Hub
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(wheelCenter, 4, 7, 0, Math.PI * 2);
+        ctx.fill();
+        // Machined Silver Star Spokes
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 2;
+        for (let sp = 0; sp < 5; sp++) {
+          const spAngle = (sp / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(wheelCenter, 4);
+          ctx.lineTo(wheelCenter + Math.cos(spAngle) * 9, 4 + Math.sin(spAngle) * 9);
+          ctx.stroke();
+        }
+      });
+
+      // Steered Front Wheels
       const steerAngle = p.steer;
+      [-carW * 0.46, carW * 0.46].forEach(fx => {
+        ctx.save();
+        ctx.translate(fx, -carH * 0.6);
+        ctx.rotate(steerAngle);
+        ctx.fillStyle = '#09090b';
+        ctx.fillRect(-8, -16, 16, 34);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(-4, -10, 8, 22);
+        ctx.restore();
+      });
 
-      ctx.save();
-      ctx.translate(-carW * 0.45, -carH * 0.6);
-      ctx.rotate(steerAngle);
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(-10, -18, 20, 38);
-      ctx.fillStyle = '#71717a';
-      ctx.fillRect(-6, -12, 12, 26);
-      ctx.restore();
-
-      ctx.save();
-      ctx.translate(carW * 0.45, -carH * 0.6);
-      ctx.rotate(steerAngle);
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(-10, -18, 20, 38);
-      ctx.fillStyle = '#71717a';
-      ctx.fillRect(-6, -12, 12, 26);
-      ctx.restore();
-
-      // Main Off-road Chassis
-      ctx.fillStyle = selectedCar.color;
-      ctx.strokeStyle = '#09090b';
-      ctx.lineWidth = 3;
+      // Carbon-Fiber Rear Aerodynamic Diffuser with Vertical Aero Fins
+      ctx.fillStyle = '#09090b';
       ctx.beginPath();
-      ctx.roundRect(-carW * 0.44, -carH * 0.52, carW * 0.88, carH * 0.68, 8);
+      ctx.roundRect(-carW * 0.42, 6, carW * 0.84, 16, 4);
+      ctx.fill();
+      // Diffuser vertical fins
+      ctx.fillStyle = '#1e293b';
+      [-36, -18, 0, 18, 36].forEach(finX => {
+        ctx.fillRect(finX - 1.5, 8, 3, 14);
+      });
+
+      // Visible Quad Polished Chrome Exhaust Tips
+      const exhaustPipes = [-50, -36, 36, 50];
+      exhaustPipes.forEach(exX => {
+        // Chrome outer bevel ring
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.arc(exX, 14, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Dark scorched inner exhaust bore
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(exX, 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Metallic Electric-Blue Sports Car Body (Aggressive sculpted haunches)
+      const bodyColor = selectedCar.color || '#0284c7'; // Electric metallic blue
+      const bodyGrad = ctx.createLinearGradient(-carW * 0.46, 0, carW * 0.46, 0);
+      bodyGrad.addColorStop(0, '#0369a1');
+      bodyGrad.addColorStop(0.2, bodyColor);
+      bodyGrad.addColorStop(0.5, '#38bdf8'); // High-gloss metallic sheen
+      bodyGrad.addColorStop(0.8, bodyColor);
+      bodyGrad.addColorStop(1, '#0369a1');
+
+      ctx.fillStyle = bodyGrad;
+      ctx.strokeStyle = '#082f49';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-carW * 0.45, -carH * 0.54, carW * 0.9, carH * 0.72, [14, 14, 8, 8]);
       ctx.fill();
       ctx.stroke();
 
-      // Center Racing Stripe
-      ctx.fillStyle = selectedCar.stripeColor;
-      ctx.fillRect(-15, -carH * 0.52, 30, carH * 0.68);
-
-      // Cabin Roof
-      ctx.fillStyle = '#0f172a';
+      // Muscular Rear Wheel Arch Bulges
+      ctx.fillStyle = '#0284c7';
       ctx.beginPath();
-      ctx.roundRect(-carW * 0.26, -carH * 0.84, carW * 0.52, carH * 0.44, 6);
+      ctx.ellipse(-carW * 0.42, -carH * 0.1, 16, 22, -0.15, 0, Math.PI * 2);
+      ctx.ellipse(carW * 0.42, -carH * 0.1, 16, 22, 0.15, 0, Math.PI * 2);
       ctx.fill();
 
-      // Tinted Rear Window with Cyan Reflection
-      ctx.fillStyle = '#38bdf8';
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 8;
-      ctx.fillRect(-carW * 0.2, -carH * 0.76, carW * 0.4, carH * 0.18);
-      ctx.shadowBlur = 0;
+      // Dual Matte-Black Racing Stripes with Silver Pinstripes
+      [-12, 12].forEach(stX => {
+        // Silver accent pinstripe edge
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(stX - 8.5, -carH * 0.54, 17, carH * 0.72);
+        // Dark matte black racing stripe core
+        ctx.fillStyle = '#09090b';
+        ctx.fillRect(stX - 7, -carH * 0.54, 14, carH * 0.72);
+      });
 
-      // Illuminated Dual LED Tail-lights
+      // Sculpted Aerodynamic Cabin & Roof
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-carW * 0.28, -carH * 0.88, carW * 0.56, carH * 0.48, [12, 12, 4, 4]);
+      ctx.fill();
+
+      // Dark Tinted Obsidian Glass Canopy with Specular Cyan Reflections
+      const glassGrad = ctx.createLinearGradient(0, -carH * 0.86, 0, -carH * 0.48);
+      glassGrad.addColorStop(0, '#030712');
+      glassGrad.addColorStop(0.65, '#0f172a');
+      glassGrad.addColorStop(1, '#1e293b');
+      ctx.fillStyle = glassGrad;
+      ctx.beginPath();
+      ctx.roundRect(-carW * 0.22, -carH * 0.84, carW * 0.44, carH * 0.38, 8);
+      ctx.fill();
+
+      // High-Quality Diagonal Specular Light Reflection across rear glass
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(-carW * 0.15, -carH * 0.82);
+      ctx.lineTo(-carW * 0.05, -carH * 0.82);
+      ctx.lineTo(carW * 0.08, -carH * 0.5);
+      ctx.lineTo(-carW * 0.02, -carH * 0.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Carbon-Fiber High-Downforce GT Rear Wing / Spoiler
+      // Dual mounting stanchions
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(-carW * 0.25, -carH * 0.38, 7, 24);
+      ctx.fillRect(carW * 0.25 - 7, -carH * 0.38, 7, 24);
+      // High-downforce wing blade
+      ctx.fillStyle = '#030712';
+      ctx.fillRect(-carW * 0.44, -carH * 0.42, carW * 0.88, 8);
+      // Aerodynamic endplates
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(-carW * 0.45, -carH * 0.48, 4, 18);
+      ctx.fillRect(carW * 0.45 - 4, -carH * 0.48, 4, 18);
+
+      // Detailed Continuous Modern LED Taillight Bar
       const playerBraking = s.keys.down || mobileControlsRef.current.brake;
-      ctx.fillStyle = playerBraking ? '#ef4444' : '#dc2626';
-      ctx.shadowColor = '#ef4444';
-      ctx.shadowBlur = playerBraking ? 18 : 10;
-      ctx.fillRect(-carW * 0.38, -carH * 0.12, 36, 13);
-      ctx.fillRect(carW * 0.38 - 36, -carH * 0.12, 36, 13);
+      const tailLightColor = playerBraking ? '#ff0033' : '#ef4444';
+      ctx.fillStyle = tailLightColor;
+      ctx.shadowColor = tailLightColor;
+      ctx.shadowBlur = playerBraking ? 24 : 12;
+
+      // Full-width lightbar
+      ctx.fillRect(-carW * 0.40, -carH * 0.12, carW * 0.80, 8);
+
+      // Outer signature angular C-bracket LED clusters
+      ctx.fillRect(-carW * 0.42, -carH * 0.18, 14, 16);
+      ctx.fillRect(carW * 0.42 - 14, -carH * 0.18, 14, 16);
+
+      // Center High-Mounted Stop Lamp (CHMSL)
+      if (playerBraking) {
+        ctx.fillStyle = '#ff2222';
+        ctx.fillRect(-18, -carH * 0.48, 36, 4);
+      }
       ctx.shadowBlur = 0;
 
-      // Exhaust Boost Flames (Twin fiery exhaust blasts or Mega Nitro Jets)
+      // Blue Nitro Jets or Exhaust Boost Flames
       if (p.isBoosting) {
-        // High-velocity Cyan/Blue Nitro Blast with White Core
-        ctx.fillStyle = '#00f0ff';
-        ctx.shadowColor = '#00f0ff';
-        ctx.shadowBlur = 26;
-        ctx.beginPath();
-        ctx.ellipse(-26, 24, 9, 28 + Math.random() * 16, 0, 0, Math.PI * 2);
-        ctx.ellipse(26, 24, 9, 28 + Math.random() * 16, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // High-velocity Electric-Blue Nitro Blast with White Hot Core
+        [-43, 43].forEach(blastX => {
+          // Electric-blue nitro flame
+          ctx.fillStyle = '#00f0ff';
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 28;
+          ctx.beginPath();
+          ctx.ellipse(blastX, 26, 8, 30 + Math.random() * 18, 0, 0, Math.PI * 2);
+          ctx.fill();
 
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.ellipse(-26, 18, 4, 14 + Math.random() * 8, 0, 0, Math.PI * 2);
-        ctx.ellipse(26, 18, 4, 14 + Math.random() * 8, 0, 0, Math.PI * 2);
-        ctx.fill();
+          // White inner thermal core
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(blastX, 20, 3.5, 16 + Math.random() * 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
         ctx.shadowBlur = 0;
       } else if (s.keys.up || mobileControlsRef.current.accel) {
-        ctx.fillStyle = '#f59e0b';
-        ctx.shadowColor = '#f59e0b';
-        ctx.shadowBlur = 16;
-        ctx.beginPath();
-        ctx.ellipse(-26, 16, 6, 14 + Math.random() * 9, 0, 0, Math.PI * 2);
-        ctx.ellipse(26, 16, 6, 14 + Math.random() * 9, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Subtle acceleration exhaust pops
+        [-43, 43].forEach(blastX => {
+          ctx.fillStyle = '#38bdf8';
+          ctx.shadowColor = '#0284c7';
+          ctx.shadowBlur = 14;
+          ctx.beginPath();
+          ctx.ellipse(blastX, 20, 5, 12 + Math.random() * 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
         ctx.shadowBlur = 0;
       }
 

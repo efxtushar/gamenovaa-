@@ -229,19 +229,40 @@ export const GarageShowcaseCanvas: React.FC<GarageShowcaseProps> = ({ car, onCol
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.stroke();
 
-      // Racing Livery Center Stripe
-      ctx.fillStyle = car.stripeColor;
-      ctx.fillRect(-10, -bodyHeight * 0.85, 20, bodyHeight * 0.95);
+      // Racing Livery Center Stripes
+      if (car.id === 'apex-gt') {
+        [-10, 10].forEach(stX => {
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(stX - 6.5, -bodyHeight * 0.85, 13, bodyHeight * 0.95);
+          ctx.fillStyle = car.stripeColor;
+          ctx.fillRect(stX - 5, -bodyHeight * 0.85, 10, bodyHeight * 0.95);
+        });
+      } else {
+        ctx.fillStyle = car.stripeColor;
+        ctx.fillRect(-10, -bodyHeight * 0.85, 20, bodyHeight * 0.95);
+      }
 
-      // Aerodynamic Tubular Roll Cage / Spoilers
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-bodyWidth * 0.4, -bodyHeight * 0.5);
-      ctx.lineTo(-bodyWidth * 0.24, -bodyHeight * 0.88);
-      ctx.lineTo(bodyWidth * 0.2, -bodyHeight * 0.88);
-      ctx.lineTo(bodyWidth * 0.38, -bodyHeight * 0.5);
-      ctx.stroke();
+      // High-Downforce GT Wing Spoiler
+      if (car.id === 'apex-gt') {
+        ctx.fillStyle = '#09090b';
+        ctx.fillRect(-bodyWidth * 0.28, -bodyHeight * 0.98, 6, 18);
+        ctx.fillRect(bodyWidth * 0.28 - 6, -bodyHeight * 0.98, 6, 18);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-bodyWidth * 0.46, -bodyHeight * 1.05, bodyWidth * 0.92, 8);
+        ctx.fillStyle = car.color;
+        ctx.fillRect(-bodyWidth * 0.47, -bodyHeight * 1.12, 5, 18);
+        ctx.fillRect(bodyWidth * 0.47 - 5, -bodyHeight * 1.12, 5, 18);
+      } else {
+        // Aerodynamic Tubular Roll Cage / Spoilers
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-bodyWidth * 0.4, -bodyHeight * 0.5);
+        ctx.lineTo(-bodyWidth * 0.24, -bodyHeight * 0.88);
+        ctx.lineTo(bodyWidth * 0.2, -bodyHeight * 0.88);
+        ctx.lineTo(bodyWidth * 0.38, -bodyHeight * 0.5);
+        ctx.stroke();
+      }
 
       // LED Headlights / Taillights
       if (headlightsOn) {
